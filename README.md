@@ -2,14 +2,18 @@
 
 Sistema para negocios de comida rápida (perros calientes, hamburguesas, pizzas, arepas, pepitos, combos, bebidas…), con inventario por recetas, mesas, cocina, caja en $ y Bs y panel multisede.
 
-- **Web:** https://sano-restaurant.web.app (también se instala como app desde Chrome/Edge)
-- **Android:** `Instaladores/SANO-Restaurant.apk`
-- **Windows:** `Instaladores/SANO-Restaurant-Instalador-1.0.0.exe` (o la versión portable, que no se instala)
+- **App:** https://sano-restaurant.web.app — un solo sistema que se instala desde el navegador en teléfonos y computadoras
 - **Firebase:** proyecto `sano-restaurant` (Hosting + Authentication + Firestore)
 - **Credenciales:** `CREDENCIALES_SANO_RESTAURANT.txt` (20 sedes + administrador). **No lo compartas.**
 - **Ventas / soporte:** WhatsApp +58 422-190 6045
 
-Las apps de Android y Windows cargan la web publicada: cada despliegue las actualiza sin reinstalar.
+## Instalar la app (sin tiendas ni descargas)
+El botón **Instalar** aparece en el inicio de sesión, en el menú lateral, en Inicio y en Configuración › Instalar y respaldo. En Chrome y Edge abre el instalador del navegador. Donde el navegador no lo ofrece, muestra los pasos:
+- **Android (Chrome):** menú ⋮ › *Instalar app* o *Agregar a la pantalla principal*.
+- **Computadora (Chrome o Edge):** ícono de instalar en la barra de direcciones, o menú › *Instalar*. Queda un acceso directo en el escritorio y abre en su propia ventana.
+- **iPhone/iPad (Safari):** Compartir › *Agregar a inicio*.
+
+La app instalada es la misma web: al publicar cambios, todos los equipos se actualizan solos. Funciona sin internet y sincroniza al volver la conexión. Imprime recibos y comandas con la impresora configurada en el equipo. Al mantener presionado el ícono aparecen accesos rápidos a Vender, Mesas, Cocina e Inventario.
 
 ## Cómo funciona el inventario por recetas
 1. En **Inventario** registras los insumos que compras (pan, salchicha, carne, queso en rebanadas o gramos, salsas, refrescos, envases…), con su stock mínimo y su costo.
@@ -55,29 +59,23 @@ firestore.rules         Seguridad: sedes aisladas, congelación, vencimiento, de
 scripts/provision.mjs   Crea/actualiza las sedes:  node provision.mjs 25
 scripts/e2e.mjs         Prueba completa (39 verificaciones) con emuladores
 scripts/prod-smoke.mjs  Prueba rápida en producción
-apps/android            Proyecto Capacitor (APK)
-apps/windows            Proyecto Electron (instalador .exe)
+scripts/pwa-check.mjs   Verifica que la app sea instalable en PC y Android
+scripts/screens.mjs     Regenera las capturas que muestra Chrome al instalar
 ```
 
 ## Comandos
 ```
-firebase deploy --only hosting                 # publicar cambios de la app (actualiza web, Android y Windows)
+firebase deploy --only hosting                 # publicar cambios (todos los equipos instalados se actualizan)
 firebase deploy --only firestore               # publicar reglas
 cd scripts && node provision.mjs 25            # crear más sedes (conserva las existentes)
 
 # Pruebas locales
 firebase emulators:start --only auth,firestore,hosting      (con JAVA_HOME del JBR de Android Studio)
 sh scripts/test-emu.sh
-
-# Reconstruir instaladores
-cd apps/android && npm run apk                 # JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"
-cd apps/windows && npm run dist
 ```
 
 ## Archivos que debes respaldar (no van a git)
 - `CREDENCIALES_SANO_RESTAURANT.txt` y `scripts/.accounts.json`: contraseñas de las sedes
-- `apps/android/android/app/sanorestaurant-release.jks` y `apps/android/android/keystore.properties`: firma del APK. Sin ellos no se pueden publicar actualizaciones del APK con la misma firma.
 
 ## Límites del plan gratuito (Spark)
 Firestore permite unas 20 000 escrituras y 50 000 lecturas al día para todo el proyecto. Una venta usa aproximadamente de 5 a 12 escrituras, según los ingredientes. Con muchas sedes activas conviene pasar al plan Blaze (se paga solo lo que se usa).
-En el APK de Android, imprimir y descargar archivos CSV depende del WebView. Para imprimir tickets desde Android, usa la app instalada desde Chrome; en Windows funciona directamente.

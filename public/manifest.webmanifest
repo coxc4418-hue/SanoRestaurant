@@ -2,18 +2,34 @@
   "id": "/",
   "name": "SANO Restaurant — Sistema para comida rápida",
   "short_name": "SANO Restaurant",
-  "description": "Punto de venta, mesas, cocina, inventario por recetas, caja en $ y Bs y reportes para negocios de comida rápida.",
-  "start_url": "/",
+  "description": "Punto de venta, mesas, cocina, inventario por recetas, caja en $ y Bs con tasa BCV, clientes y reportes para negocios de comida rápida.",
+  "start_url": "/?source=app",
   "scope": "/",
   "display": "standalone",
+  "launch_handler": { "client_mode": "focus-existing" },
   "orientation": "any",
   "background_color": "#0d0b09",
   "theme_color": "#ea580c",
   "lang": "es",
+  "dir": "ltr",
   "categories": ["business", "food", "productivity"],
   "icons": [
     { "src": "/assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "/assets/icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Vender", "short_name": "Vender", "url": "/#/vender", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mesas", "short_name": "Mesas", "url": "/#/mesas", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Cocina", "short_name": "Cocina", "url": "/#/cocina", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Inventario", "short_name": "Inventario", "url": "/#/inventario", "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }] }
+  ],
+  "screenshots": [
+    { "src": "/assets/screens/pc-vender.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Punto de venta con precios en $ y Bs" },
+    { "src": "/assets/screens/pc-inicio.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Resumen del día y alertas de stock" },
+    { "src": "/assets/screens/pc-cocina.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Pantalla de cocina" },
+    { "src": "/assets/screens/movil-vender.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Vender desde el teléfono" },
+    { "src": "/assets/screens/movil-inicio.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Resumen del día" },
+    { "src": "/assets/screens/movil-mesas.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow", "label": "Mesas del local" }
   ]
 }

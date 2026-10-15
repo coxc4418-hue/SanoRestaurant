@@ -4,8 +4,9 @@ import { requirePin, changePassword, authErrorMessage, session } from '../auth.j
 import { esc, num, toast, parseNum, setBusy, toggleTheme, download, nowISO } from '../utils.js';
 import { icon } from '../icons.js';
 import { openRateModal, salesWa, SALES_PHONE_FMT } from '../shared.js';
+import { isStandalone, bindInstallButtons } from '../install.js';
 
-const SECTIONS = { negocio: 'Negocio', ventas: 'Ventas y cobro', mesas: 'Mesas y personal', seguridad: 'Seguridad', apps: 'Apps y respaldo' };
+const SECTIONS = { negocio: 'Negocio', ventas: 'Ventas y cobro', mesas: 'Mesas y personal', seguridad: 'Seguridad', apps: 'Instalar y respaldo' };
 
 export function mount(el) {
   let sec = 'negocio';
@@ -101,13 +102,15 @@ export function mount(el) {
     }
     if (sec === 'apps') {
       body.innerHTML = `<div class="grid-2">
-        <div class="card stack"><div class="card-title">${icon('install')} Instala SANO Restaurant</div>
-          <p class="small muted" style="margin:0">Los mismos datos en todos tus equipos, en tiempo real. Funciona sin internet y sincroniza al volver la conexión.</p>
+        <div class="card stack"><div class="card-title">${icon('install')} Instalar la app</div>
+          <p class="small muted" style="margin:0">Instala SANO Restaurant desde el navegador en cada teléfono, tablet o computadora del negocio. Es el mismo sistema, conectado en tiempo real, con su propio ícono y ventana.</p>
+          ${isStandalone() ? `<div class="pay-status ok"><span>${icon('check')} Estás usando la app instalada</span><span></span></div>` : `<button class="btn btn-primary btn-lg" data-install>${icon('install')} Instalar en este equipo</button>`}
           <div class="list">
-            <div class="list-item"><span class="kpi-icon tone-success" style="width:34px;height:34px">${icon('phone')}</span><div class="grow"><b>Android</b><div class="t-sub">Instala el APK en teléfonos y tablets.</div></div><a class="btn btn-secondary btn-sm" href="${salesWa('Hola, quiero el instalador Android de SANO Restaurant.')}" target="_blank" rel="noopener">Solicitar</a></div>
-            <div class="list-item"><span class="kpi-icon tone-info" style="width:34px;height:34px">${icon('grid')}</span><div class="grow"><b>Windows</b><div class="t-sub">Programa de escritorio para la caja.</div></div><a class="btn btn-secondary btn-sm" href="${salesWa('Hola, quiero el instalador de Windows de SANO Restaurant.')}" target="_blank" rel="noopener">Solicitar</a></div>
-            <div class="list-item"><span class="kpi-icon tone-brand" style="width:34px;height:34px">${icon('layers')}</span><div class="grow"><b>Navegador</b><div class="t-sub">sano-restaurant.web.app · usa “Instalar” en el menú.</div></div></div>
-          </div></div>
+            <div class="list-item"><span class="kpi-icon tone-success" style="width:34px;height:34px">${icon('phone')}</span><div class="grow"><b>Android</b><div class="t-sub">Chrome › menú ⋮ › Instalar app</div></div></div>
+            <div class="list-item"><span class="kpi-icon tone-info" style="width:34px;height:34px">${icon('grid')}</span><div class="grow"><b>Computadora</b><div class="t-sub">Chrome o Edge › ícono de instalar en la barra de direcciones</div></div></div>
+            <div class="list-item"><span class="kpi-icon tone-violet" style="width:34px;height:34px">${icon('phone')}</span><div class="grow"><b>iPhone / iPad</b><div class="t-sub">Safari › Compartir › Agregar a inicio</div></div></div>
+          </div>
+          <div class="small muted">${icon('print')} Los recibos y comandas se imprimen desde la app con la impresora configurada en el equipo.</div></div>
         <div class="card stack"><div class="card-title">${icon('download')} Respaldo de datos</div>
           <p class="small muted" style="margin:0">Descarga una copia de tu menú, insumos, mesas y clientes en un archivo.</p>
           <button class="btn btn-secondary" id="s-backup">${icon('download')} Descargar respaldo</button>
@@ -116,6 +119,7 @@ export function mount(el) {
           <p class="small muted" style="margin:0">¿Dudas o sugerencias? Escríbenos.</p>
           <a class="btn btn-whatsapp" href="${salesWa('Hola, necesito soporte con SANO Restaurant.')}" target="_blank" rel="noopener">${icon('whatsapp')} ${SALES_PHONE_FMT}</a></div>
       </div>`;
+      bindInstallButtons(body);
       $('#s-backup').onclick = () => {
         const data = { app: 'SANO Restaurant', exportedAt: nowISO(), business: store.businessName, settings: store.settings, ingredients: store.ingredients, products: store.products, tables: store.tables, customers: store.customers };
         download(`respaldo-${(store.businessName || 'sano').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), 'application/json');

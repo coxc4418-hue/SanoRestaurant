@@ -3,6 +3,7 @@ import { store, ORDER_TYPES } from '../store.js';
 import { esc, usd, bs, num, fmtLongDate, todayKey, dayKey, addDays, emptyState } from '../utils.js';
 import { icon } from '../icons.js';
 import { openRateModal, stockText } from '../shared.js';
+import { isStandalone, platform, bindInstallButtons } from '../install.js';
 
 /** Barras verticales de una serie (ventas por día) con tooltip */
 export function barChart(rows, { valueFmt = usd } = {}) {
@@ -11,6 +12,11 @@ export function barChart(rows, { valueFmt = usd } = {}) {
     <div class="bar ${r.today ? 'today' : ''}" title="${esc(r.label)}: ${esc(valueFmt(r.value))}">
       <small class="num" style="font-size:11px;color:var(--muted)">${r.value > 0 && (r.today || r.value === max) ? esc(valueFmt(r.value)) : ''}</small>
       <i style="height:${Math.max(1.5, r.value / max * 100)}%"></i><span>${esc(r.short)}</span></div>`).join('')}</div>`;
+}
+
+function showInstall() {
+  if (isStandalone()) return false;
+  try { return localStorage.getItem('sr_install_hide') !== '1'; } catch (_) { return true; }
 }
 
 export function mount(el, { navigate }) {
@@ -75,6 +81,7 @@ export function mount(el, { navigate }) {
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Ganancia bruta</span><span class="kpi-icon tone-info">${icon('dollar')}</span></div><div class="kpi-value">${usd(profit)}</div><div class="kpi-sub">Ventas − costo de insumos</div></div>
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Por cobrar</span><span class="kpi-icon tone-warning">${icon('clock')}</span></div><div class="kpi-value">${usd(openValue)}</div><div class="kpi-sub">${openOrders} pedido(s) abiertos</div></div>
       </div>
+      ${showInstall() ? `<div class="install-card mb"><img src="/assets/icon-192.png" alt=""><div class="grow"><b>Instala SANO Restaurant en este ${platform() === 'desktop' ? 'computador' : 'teléfono'}</b><span>Ábrelo con un toque desde tu ${platform() === 'desktop' ? 'escritorio' : 'pantalla de inicio'}, en su propia ventana.</span></div><button class="btn btn-primary btn-sm" data-install>${icon('install')} Instalar</button><button class="btn btn-ghost btn-icon btn-sm" id="d-inst-x" aria-label="Ocultar">${icon('x')}</button></div>` : ''}
       ${alerts.length ? `<div class="stack-sm mb">${alerts.map((a, i) => `<div class="card between row-wrap" style="padding:12px 16px"><div class="row"><span class="kpi-icon tone-${a.tone}" style="width:32px;height:32px">${icon(a.icon)}</span><span class="bold">${esc(a.text)}</span></div><button class="btn btn-secondary btn-sm" data-alert="${i}">${a.btn}</button></div>`).join('')}</div>` : ''}
       <div class="grid-main">
         <div class="stack">
@@ -93,6 +100,8 @@ export function mount(el, { navigate }) {
     el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => navigate(b.dataset.go, b.dataset.p ? { params: { type: b.dataset.p } } : {}));
     el.querySelectorAll('[data-alert]').forEach((b) => b.onclick = () => alerts[+b.dataset.alert].go());
     $('#d-rate').onclick = openRateModal;
+    bindInstallButtons(el);
+    if ($('#d-inst-x')) $('#d-inst-x').onclick = () => { try { localStorage.setItem('sr_install_hide', '1'); } catch (_) {} render(); };
     $('#d-sell').onclick = () => navigate('vender');
     if ($('#d-shop')) $('#d-shop').onclick = () => navigate('inventario');
   }

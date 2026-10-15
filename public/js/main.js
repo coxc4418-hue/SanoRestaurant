@@ -5,6 +5,7 @@ import { session, login, logout, authErrorMessage, SUPER_EMAIL, usernameOf } fro
 import { esc, toast, num, closeAllModals, $, $$, setBusy, confirmDialog, toggleTheme, openModal, fmtDate } from './utils.js';
 import { icon } from './icons.js';
 import { openRateModal, autoUpdateRate, salesWa, SALES_PHONE_FMT } from './shared.js';
+import { isStandalone, platform, bindInstallButtons } from './install.js';
 
 export const VERSION = '1.0.0';
 
@@ -24,7 +25,6 @@ const ROUTES = {
 
 let currentRoute = null;
 let currentCleanup = null;
-let deferredInstall = null;
 let storeUnsub = null;
 let routeParams = {};
 
@@ -63,7 +63,7 @@ function renderLogin() {
             <div class="auth-feature"><span>${icon('chart')}</span>Reportes de ventas y ganancias</div>
           </div>
         </div>
-        <div class="small" style="color:rgba(255,255,255,.55);position:relative;z-index:1">© ${new Date().getFullYear()} SANO Restaurant · Web, Android y Windows</div>
+        <div class="small" style="color:rgba(255,255,255,.55);position:relative;z-index:1">© ${new Date().getFullYear()} SANO Restaurant · Instálalo desde Chrome en tu teléfono o computadora</div>
       </section>
       <section class="auth-panel">
         <div class="auth-card">
@@ -90,6 +90,11 @@ function renderLogin() {
           <p class="hint center mt">Sin registro. Incluye un menú de ejemplo con recetas, mesas y ventas; se borra al terminar.</p>
           <a class="btn btn-whatsapp btn-lg btn-block mt" id="lg-wa" href="${salesWa()}" target="_blank" rel="noopener">${icon('whatsapp')} Contratar SANO Restaurant</a>
           <p class="hint center mt">WhatsApp: <b>${SALES_PHONE_FMT}</b></p>
+          ${isStandalone() ? '' : `<div class="install-card mt-lg">
+            <img src="/assets/icon-192.png" alt="">
+            <div class="grow"><b>Instala la app</b><span>${platform() === 'desktop' ? 'Acceso directo en tu computadora' : 'Ícono en tu teléfono'}, sin tiendas ni descargas.</span></div>
+            <button type="button" class="btn btn-primary btn-sm" data-install>${icon('install')} Instalar</button>
+          </div>`}
           <p class="auth-foot">¿Olvidaste tu contraseña? Escríbenos por WhatsApp.</p>
         </div>
       </section>
@@ -125,6 +130,7 @@ function renderLogin() {
       setBusy(btn, false);
     }
   };
+  bindInstallButtons(root());
   setTimeout(() => $('#lg-user')?.focus(), 50);
   if (demoEndedNotice) showDemoEnded();
 }
@@ -324,7 +330,7 @@ function renderShell() {
           <div class="between">
             <div class="sb-status"><span class="dot" id="sb-dot"></span><span id="sb-net">En línea</span></div>
             <div class="row">
-              <button class="sb-btn" id="sb-install" hidden title="Instalar aplicación">${icon('install')} Instalar</button>
+              ${isStandalone() ? '' : `<button class="sb-btn" data-install title="Instalar la app en este equipo">${icon('install')} Instalar</button>`}
               <button class="sb-btn" id="sb-theme" title="Cambiar tema" style="padding:6px 8px">${icon(document.documentElement.dataset.theme === 'dark' ? 'sun' : 'moon')}</button>
             </div>
           </div>
@@ -342,6 +348,7 @@ function renderShell() {
           <button class="btn btn-ghost btn-icon" id="tb-menu" aria-label="Menú">${icon('menu')}</button>
           <img src="/assets/logo.svg" alt="">
           <div class="grow" style="min-width:0"><div class="tb-title ellipsis" id="tb-title">SANO Restaurant</div><div class="tb-sub ellipsis">${esc(tName)}</div></div>
+          ${isStandalone() ? '' : `<button class="btn btn-ghost btn-icon" data-install aria-label="Instalar app" title="Instalar app">${icon('install')}</button>`}
           <button class="rate-mini" id="tb-rate">Bs ${num(store.rate)}</button>
         </header>
         <main class="content" id="view"></main>
@@ -370,14 +377,7 @@ function renderShell() {
     if (await confirmDialog({ title: 'Terminar demo', message: 'Se cerrará la sesión y se borrarán los datos de esta demo.', confirmText: 'Terminar', danger: true })) endDemo(false);
   };
   if (session.isSuper) $('#ab-back').onclick = () => { sessionStorage.removeItem('sr_view_tenant'); location.hash = ''; showBoot(); renderAdminPanel(); };
-  const inst = $('#sb-install');
-  if (deferredInstall) inst.hidden = false;
-  inst.onclick = async () => {
-    if (!deferredInstall) return;
-    deferredInstall.prompt();
-    await deferredInstall.userChoice.catch(() => {});
-    deferredInstall = null; inst.hidden = true;
-  };
+  bindInstallButtons(root());
 
   storeUnsub = store.on('*', (evt) => {
     if (evt === 'settings' || evt === 'rate') {
@@ -499,11 +499,6 @@ function updateNetwork() {
 }
 window.addEventListener('online', () => { updateNetwork(); toast('Conexión restablecida. Sincronizando…', 'info'); });
 window.addEventListener('offline', updateNetwork);
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredInstall = e;
-  const b = $('#sb-install'); if (b) b.hidden = false;
-});
 
 if ('serviceWorker' in navigator && !sessionStorage.getItem('sr_emu')) {
   navigator.serviceWorker.register('/sw.js').then((reg) => {
