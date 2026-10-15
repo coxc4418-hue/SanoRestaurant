@@ -1,0 +1,34 @@
+{
+  "name": "sano-restaurant",
+  "productName": "SANO Restaurant",
+  "version": "1.0.0",
+  "description": "SANO Restaurant — Sistema para negocios de comida rápida",
+  "author": "SANO Restaurant",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.sanorestaurant.desktop",
+    "productName": "SANO Restaurant",
+    "copyright": "SANO Restaurant",
+    "files": ["main.js", "offline.html", "offline-logo.png"],
+    "directories": { "output": "dist", "buildResources": "build" },
+    "win": { "icon": "build/icon.png", "target": ["nsis", "portable"] },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SANO Restaurant",
+      "artifactName": "SANO-Restaurant-Instalador-${version}.${ext}"
+    },
+    "portable": { "artifactName": "SANO-Restaurant-Portable-${version}.${ext}" }
+  }
+}
