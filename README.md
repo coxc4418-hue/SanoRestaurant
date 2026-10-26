@@ -37,7 +37,7 @@ La app instalada es la misma web: al publicar cambios, todos los equipos se actu
 | Clientes | Datos de delivery, visitas, consumo, historial y WhatsApp |
 | Caja | Apertura y cierre por turno con arqueo en $ y Bs, gastos e ingresos, historial imprimible |
 | Reportes (PIN) | Ventas, ganancia, horas pico, formas de pago, productos, insumos consumidos y gastos; Excel (CSV) e impresión |
-| Configuración | Datos y recibo, tasa (BCV automática o manual), IVA, % de servicio, delivery, zonas, meseros, PIN, contraseña y respaldo |
+| Configuración | Datos y recibo, tasa (BCV automática o manual), IVA, costo de delivery, zonas, meseros, PIN, contraseña y respaldo |
 
 **Tasa del día:** cada mañana se consulta la tasa oficial BCV. Se puede escribir una tasa manual en cualquier momento (botón de la tasa en el menú lateral).
 
