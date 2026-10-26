@@ -21,7 +21,6 @@ export function openCharge(ctx) {
     const s = store.settings;
     const st = {
       discount: 0,
-      servicePct: ctx.type === 'mesa' ? (Number(s.serviceCharge) || 0) : 0,
       tip: 0,
       deliveryFee: ctx.type === 'delivery' ? (ctx.deliveryFee ?? Number(s.deliveryFee) ?? 0) : 0,
       pays: [],
@@ -34,12 +33,10 @@ export function openCharge(ctx) {
       body: `
         <div class="stack">
           <div class="pay-total"><div class="small muted">Total a cobrar</div><b data-total>$ 0,00</b><span data-totalbs>Bs 0,00</span></div>
-          <div class="form-grid-3">
+          <div class="${ctx.type === 'delivery' ? 'form-grid-3' : 'form-grid'}">
             <div class="field"><label>Descuento ($)</label><div class="input-group"><span class="prefix">$</span><input class="input input-sm" data-disc inputmode="decimal" placeholder="0,00"></div></div>
-            <div class="field"><label>Propina ($)</label><div class="input-group"><span class="prefix">$</span><input class="input input-sm" data-tip inputmode="decimal" placeholder="0,00"></div></div>
-            ${ctx.type === 'delivery'
-              ? `<div class="field"><label>Delivery ($)</label><div class="input-group"><span class="prefix">$</span><input class="input input-sm" data-dfee inputmode="decimal" value="${num(st.deliveryFee)}"></div></div>`
-              : `<div class="field"><label>Servicio (%)</label><input class="input input-sm" data-svc inputmode="decimal" value="${st.servicePct || ''}" placeholder="0"></div>`}
+            <div class="field"><label>Propina (opcional)</label><div class="input-group"><span class="prefix">$</span><input class="input input-sm" data-tip inputmode="decimal" placeholder="0,00"></div></div>
+            ${ctx.type === 'delivery' ? `<div class="field"><label>Delivery ($)</label><div class="input-group"><span class="prefix">$</span><input class="input input-sm" data-dfee inputmode="decimal" value="${num(st.deliveryFee)}"></div></div>` : ''}
           </div>
           <div data-breakdown class="small muted"></div>
           <div>
@@ -59,7 +56,7 @@ export function openCharge(ctx) {
       onClose: () => { if (!done) resolve(null); }
     });
     const $ = (q) => m.el.querySelector(q);
-    const totals = () => orderTotals(ctx.lines, { discount: st.discount, servicePct: st.servicePct, deliveryFee: st.deliveryFee, tip: st.tip });
+    const totals = () => orderTotals(ctx.lines, { discount: st.discount, deliveryFee: st.deliveryFee, tip: st.tip });
     const paidUSD = () => round2(st.pays.reduce((a, p) => a + (PAY_METHODS[p.method].cur === 'BS' ? p.amount / rate : p.amount), 0));
 
     function addPay(method) {
@@ -80,13 +77,18 @@ export function openCharge(ctx) {
         return `<div class="pay-line">
           <span class="lbl"><i style="background:${def.color}"></i>${def.label}</span>
           <div class="input-group"><span class="prefix">${def.cur === 'BS' ? 'Bs' : '$'}</span><input class="input input-sm" style="padding-left:${def.cur === 'BS' ? 34 : 26}px" data-amt="${i}" inputmode="decimal" value="${num(p.amount)}"></div>
-          <span class="small muted hide-xs num">≈ ${eq}</span>
+          <span class="small muted hide-xs num" data-eq="${i}">≈ ${eq}</span>
           <button type="button" class="btn btn-ghost btn-icon btn-sm" data-rm="${i}" aria-label="Quitar">${icon('x')}</button>
         </div>`;
       }).join('');
       m.el.querySelectorAll('[data-amt]').forEach((inp) => {
-        inp.oninput = () => { st.pays[+inp.dataset.amt].amount = parseNum(inp.value); renderStatus(); };
-        inp.onblur = () => renderLines();
+        inp.oninput = () => {
+          const p = st.pays[+inp.dataset.amt];
+          p.amount = parseNum(inp.value);
+          const eqEl = m.el.querySelector(`[data-eq="${inp.dataset.amt}"]`);
+          if (eqEl) eqEl.textContent = '≈ ' + (PAY_METHODS[p.method].cur === 'BS' ? usd(p.amount / rate) : bs(p.amount * rate));
+          renderStatus();
+        };
       });
       m.el.querySelectorAll('[data-rm]').forEach((b) => b.onclick = () => { st.pays.splice(+b.dataset.rm, 1); renderLines(); });
       m.el.querySelectorAll('[data-m]').forEach((b) => b.classList.toggle('on', st.pays.some((p) => p.method === b.dataset.m)));
@@ -99,7 +101,6 @@ export function openCharge(ctx) {
       $('[data-totalbs]').textContent = bs(t.total * rate);
       const parts = [`Subtotal ${usd(t.subtotal)}`];
       if (t.discount) parts.push(`Descuento −${usd(t.discount)}`);
-      if (t.service) parts.push(`Servicio ${usd(t.service)}`);
       if (t.delivery) parts.push(`Delivery ${usd(t.delivery)}`);
       if (t.tip) parts.push(`Propina ${usd(t.tip)}`);
       $('[data-breakdown]').textContent = parts.join(' · ');
@@ -118,7 +119,6 @@ export function openCharge(ctx) {
     m.el.querySelectorAll('[data-cc]').forEach((b) => b.onclick = () => { st.changeCurrency = b.dataset.cc; renderStatus(); });
     $('[data-disc]').oninput = (e) => { st.discount = parseNum(e.target.value); renderStatus(); };
     $('[data-tip]').oninput = (e) => { st.tip = parseNum(e.target.value); renderStatus(); };
-    if ($('[data-svc]')) $('[data-svc]').oninput = (e) => { st.servicePct = parseNum(e.target.value); renderStatus(); };
     if ($('[data-dfee]')) $('[data-dfee]').oninput = (e) => { st.deliveryFee = parseNum(e.target.value); renderStatus(); };
 
     $('[data-ok]').onclick = async (e) => {
@@ -129,7 +129,7 @@ export function openCharge(ctx) {
       try {
         const { sale, lowAfter } = await chargeSale({
           order: ctx.order || null, type: ctx.type, tableId: ctx.tableId, lines: ctx.lines, customer: ctx.customer || null,
-          discount: st.discount, servicePct: st.servicePct, deliveryFee: st.deliveryFee, tip: st.tip,
+          discount: st.discount, deliveryFee: st.deliveryFee, tip: st.tip,
           payments: st.pays, changeCurrency: st.changeCurrency, note: ctx.note || '', waiter: ctx.waiter || '', people: ctx.people || 0, address: ctx.address || ''
         });
         const doPrint = $('[data-print]').checked;

@@ -67,7 +67,7 @@ export function mount(el, { navigate }) {
     $('#d-root').innerHTML = `
       <div class="view-header">
         <div><h1 class="view-title">${hi} 👋</h1><p class="view-sub">${fmtLongDate()} · ${esc(store.businessName)}</p></div>
-        <div class="view-actions"><button class="btn btn-secondary" id="d-rate">${icon('refresh')} Tasa: Bs ${num(store.rate)}</button><button class="btn btn-primary" id="d-sell">${icon('cart')} Vender</button></div>
+        <div class="view-actions"><button class="btn btn-secondary" id="d-help">${icon('info')} Ayuda</button><button class="btn btn-secondary" id="d-rate">${icon('refresh')} Tasa: Bs ${num(store.rate)}</button><button class="btn btn-primary" id="d-sell">${icon('cart')} Vender</button></div>
       </div>
       <div class="quick">
         <button data-go="vender" data-p="llevar"><span class="kpi-icon tone-brand">${icon('bag')}</span><span>Para llevar<small>Venta rápida</small></span></button>
@@ -75,7 +75,7 @@ export function mount(el, { navigate }) {
         <button data-go="vender" data-p="delivery"><span class="kpi-icon tone-violet">${icon('truck')}</span><span>Delivery<small>Pedido a domicilio</small></span></button>
         <button data-go="inventario"><span class="kpi-icon tone-warning">${icon('box')}</span><span>Inventario<small>${low.length ? low.length + ' alerta(s)' : 'Todo en orden'}</small></span></button>
       </div>
-      <div class="kpis">
+      <div class="kpis" data-tour="kpis">
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Ventas de hoy</span><span class="kpi-icon tone-success">${icon('trend')}</span></div><div class="kpi-value">${usd(total)}</div><div class="kpi-sub text-bs">${bs(total * store.rate)}</div></div>
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Pedidos de hoy</span><span class="kpi-icon tone-brand">${icon('receipt')}</span></div><div class="kpi-value">${todays.length}</div><div class="kpi-sub">Ticket promedio ${usd(avg)}</div></div>
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Ganancia bruta</span><span class="kpi-icon tone-info">${icon('dollar')}</span></div><div class="kpi-value">${usd(profit)}</div><div class="kpi-sub">Ventas − costo de insumos</div></div>
@@ -90,7 +90,7 @@ export function mount(el, { navigate }) {
             ${topList.length ? topList.map(([n, d]) => `<div class="hbar" title="${esc(n)}: ${num(d.q, 0)} vendidos · ${usd(d.v)}"><span class="ellipsis">${esc(d.e || '')} ${esc(n)}</span><div class="track"><i style="width:${d.q / topMax * 100}%"></i></div><b class="num">${num(d.q, 0)}</b></div>`).join('') : emptyState('flame', 'Aún no hay ventas hoy', 'Lo más vendido aparecerá aquí.')}</div>
         </div>
         <div class="stack">
-          <div class="card"><div class="card-head"><div class="card-title">${icon('bell')} Alertas de stock</div>${low.length ? `<span class="badge badge-danger">${low.length}</span>` : ''}</div>
+          <div class="card" data-tour="stock"><div class="card-head"><div class="card-title">${icon('bell')} Alertas de stock</div>${low.length ? `<span class="badge badge-danger">${low.length}</span>` : ''}</div>
             ${low.length ? `<div class="list">${low.slice(0, 7).map((i) => `<div class="list-item"><span class="kpi-icon ${(Number(i.stock) || 0) <= 0 ? 'tone-danger' : 'tone-warning'}" style="width:30px;height:30px">${icon('alert')}</span><div class="grow"><div class="t-name">${esc(i.name)}</div><div class="t-sub">Quedan ${stockText(i)} · mínimo ${num(i.minStock || 0, 0)}</div></div></div>`).join('')}</div>
               <button class="btn btn-soft btn-block mt" id="d-shop">${icon('clipboard')} Ver lista de compras</button>` : emptyState('check', 'Inventario en orden', 'Ningún insumo está por debajo de su mínimo.')}</div>
           <div class="card"><div class="card-head"><div class="card-title">${icon('layers')} Hoy por tipo de pedido</div></div>
@@ -100,6 +100,7 @@ export function mount(el, { navigate }) {
     el.querySelectorAll('[data-go]').forEach((b) => b.onclick = () => navigate(b.dataset.go, b.dataset.p ? { params: { type: b.dataset.p } } : {}));
     el.querySelectorAll('[data-alert]').forEach((b) => b.onclick = () => alerts[+b.dataset.alert].go());
     $('#d-rate').onclick = openRateModal;
+    $('#d-help').onclick = () => import('../tour.js').then((t) => t.openHelp());
     bindInstallButtons(el);
     if ($('#d-inst-x')) $('#d-inst-x').onclick = () => { try { localStorage.setItem('sr_install_hide', '1'); } catch (_) {} render(); };
     $('#d-sell').onclick = () => navigate('vender');

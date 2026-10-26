@@ -3,6 +3,7 @@ import { store, ORDER_TYPES, unitShort } from '../store.js';
 import { esc, usd, bs, num, emptyState, startOfDay, endOfDay, addDays, dayKey, fromKey, todayKey, fmtDate, PAY_METHODS, methodLabel, toCSV, download, qtyFmt, round4 } from '../utils.js';
 import { icon } from '../icons.js';
 import { printDoc } from '../shared.js';
+import { methodNet } from '../ops.js';
 import { barChart } from './dashboard.js';
 
 const PRESETS = { today: 'Hoy', yesterday: 'Ayer', week: '7 días', month: 'Este mes', lastmonth: 'Mes pasado', custom: 'Personalizado' };
@@ -58,7 +59,7 @@ export function mount(el) {
     const total = sum((s) => s.total), cost = sum((s) => s.cost), tips = sum((s) => s.tip);
     const r = {
       sales, voided, total, cost, tips, count: sales.length,
-      discount: sum((s) => s.discount), service: sum((s) => s.service), delivery: sum((s) => s.delivery),
+      discount: sum((s) => s.discount), delivery: sum((s) => s.delivery),
       totalBs: sum((s) => s.totalBs)
     };
     r.profit = total - cost - tips;
@@ -76,7 +77,10 @@ export function mount(el) {
     r.byHour = firstH >= 0 ? r.byHour.slice(Math.max(0, firstH - 1), Math.min(24, lastH + 2)) : [];
     // Pagos
     r.byMethod = {};
-    sales.forEach((s) => (s.payments || []).forEach((p) => { r.byMethod[p.method] = r.byMethod[p.method] || { usd: 0, orig: 0, cur: p.currency }; r.byMethod[p.method].usd += p.usd || 0; r.byMethod[p.method].orig += p.amount || 0; }));
+    sales.forEach((s) => {
+      for (const [k, v] of Object.entries(methodNet(s))) { r.byMethod[k] = r.byMethod[k] || { usd: 0, orig: 0, cur: PAY_METHODS[k]?.cur || 'USD' }; r.byMethod[k].usd += v; r.byMethod[k].orig += PAY_METHODS[k]?.cur === 'BS' ? v * (s.rate || 0) : v; }
+    });
+    for (const k of Object.keys(r.byMethod)) if (Math.abs(r.byMethod[k].usd) < 0.005) delete r.byMethod[k];
     // Cambio entregado se descuenta del efectivo
     r.byType = Object.keys(ORDER_TYPES).map((k) => ({ k, n: sales.filter((s) => s.type === k).length, v: sales.filter((s) => s.type === k).reduce((acc, s) => acc + s.total, 0) }));
     // Productos
@@ -129,7 +133,7 @@ export function mount(el) {
               ${Object.keys(d.byMethod).length ? Object.entries(d.byMethod).sort((a, b) => b[1].usd - a[1].usd).map(([k, v]) => `<div class="hbar" title="${esc(methodLabel(k))}: ${usd(v.usd)}"><span class="row"><i style="width:10px;height:10px;border-radius:50%;background:${PAY_METHODS[k]?.color || '#999'}"></i>${esc(methodLabel(k))}</span><div class="track"><i style="width:${v.usd / maxM * 100}%;background:${PAY_METHODS[k]?.color || 'var(--brand)'}"></i></div><span class="num r"><b>${usd(v.usd)}</b>${v.cur === 'BS' ? `<div class="t-sub">${bs(v.orig)}</div>` : ''}</span></div>`).join('') : emptyState('card', 'Sin pagos')}</div>
             <div class="card"><div class="card-head"><div class="card-title">${icon('layers')} Por tipo de pedido</div></div>
               ${d.byType.map((t) => `<div class="between" style="padding:8px 0;border-bottom:1px dashed var(--border)"><span class="row">${icon(ORDER_TYPES[t.k].icon)} ${ORDER_TYPES[t.k].label} <span class="t-sub">(${t.n})</span></span><b class="num">${usd(t.v)}</b></div>`).join('')}
-              <div class="small muted mt">Descuentos ${usd(d.discount)} · Servicio ${usd(d.service)} · Delivery ${usd(d.delivery)} · Propinas ${usd(d.tips)}</div></div>
+              <div class="small muted mt">Descuentos ${usd(d.discount)} · Delivery ${usd(d.delivery)} · Propinas ${usd(d.tips)}</div></div>
           </div>
         </div>`;
     } else if (tab === 'products') {
@@ -157,8 +161,8 @@ export function mount(el) {
     if (tab === 'products') download(`${name}-productos.csv`, toCSV([['Producto', 'Categoría', 'Vendidos', 'Ingresos $', 'Costo $', 'Ganancia $'], ...data.products.map((p) => [p.name, p.category, p.qty, num(p.revenue), num(p.cost), num(p.revenue - p.cost)])]));
     else if (tab === 'ingredients') download(`${name}-insumos.csv`, toCSV([['Insumo', 'Consumido', 'Unidad', 'Costo $'], ...data.ingredients.map((g) => [g.name, num(g.qty, 3), unitShort(g.unit), num(g.cost)])]));
     else if (tab === 'expenses') download(`${name}-gastos.csv`, toCSV([['Fecha', 'Concepto', 'Categoría', 'Moneda', 'Monto'], ...data.expenses.map((m) => [fmtDate(m.date), m.concept, m.category, m.currency, num(m.amount)])]));
-    else download(`${name}-ventas.csv`, toCSV([['Fecha', 'Recibo', 'Pedido', 'Tipo', 'Mesa', 'Cliente', 'Productos', 'Subtotal $', 'Descuento $', 'Servicio $', 'Delivery $', 'Propina $', 'Total $', 'Tasa', 'Total Bs', 'Costo $', 'Pagos', 'Estado'],
-      ...[...data.sales, ...data.voided].sort((a, b) => (a.date || '').localeCompare(b.date || '')).map((s) => [new Date(s.date).toLocaleString('es-VE'), s.number, s.orderNo, s.typeLabel, s.tableName || '', s.customerName || '', (s.items || []).map((i) => `${i.qty}x ${i.name}${i.variantName ? ' ' + i.variantName : ''}`).join(', '), num(s.subtotal), num(s.discount || 0), num(s.service || 0), num(s.delivery || 0), num(s.tip || 0), num(s.total), num(s.rate), num(s.totalBs), num(s.cost || 0), (s.payments || []).map((p) => `${methodLabel(p.method)} ${num(p.amount)}`).join(' + '), s.status === 'voided' ? 'Anulada' : 'Completada'])]));
+    else download(`${name}-ventas.csv`, toCSV([['Fecha', 'Recibo', 'Pedido', 'Tipo', 'Mesa', 'Cliente', 'Productos', 'Subtotal $', 'Descuento $', 'Delivery $', 'Propina $', 'Total $', 'Tasa', 'Total Bs', 'Costo $', 'Pagos', 'Estado'],
+      ...[...data.sales, ...data.voided].sort((a, b) => (a.date || '').localeCompare(b.date || '')).map((s) => [new Date(s.date).toLocaleString('es-VE'), s.number, s.orderNo, s.typeLabel, s.tableName || '', s.customerName || '', (s.items || []).map((i) => `${i.qty}x ${i.name}${i.variantName ? ' ' + i.variantName : ''}`).join(', '), num(s.subtotal), num(s.discount || 0), num(s.delivery || 0), num(s.tip || 0), num(s.total), num(s.rate), num(s.totalBs), num(s.cost || 0), (s.payments || []).map((p) => `${methodLabel(p.method)} ${num(p.amount)}`).join(' + '), s.status === 'voided' ? 'Anulada' : 'Completada'])]));
   }
 
   function print() {

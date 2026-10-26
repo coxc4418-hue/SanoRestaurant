@@ -105,7 +105,6 @@ export function mount(el, { navigate }) {
         <div class="summary-box">
           ${(s.items || []).map((l) => `<div class="summary-row"><span>${l.qty} × ${esc(lineLabel(l))}${l.extras?.length ? `<br><small class="muted">+ ${l.extras.map((e) => esc(e.name)).join(', ')}</small>` : ''}</span><b class="num">${usd(l.total)}</b></div>`).join('')}
           ${s.discount ? `<div class="summary-row"><span>Descuento</span><span>−${usd(s.discount)}</span></div>` : ''}
-          ${s.service ? `<div class="summary-row"><span>Servicio</span><span>${usd(s.service)}</span></div>` : ''}
           ${s.delivery ? `<div class="summary-row"><span>Delivery</span><span>${usd(s.delivery)}</span></div>` : ''}
           ${s.tip ? `<div class="summary-row"><span>Propina</span><span>${usd(s.tip)}</span></div>` : ''}
           <div class="summary-row total"><span>Total</span><span>${usd(s.total)} <small class="text-bs">${bs(s.totalBs)}</small></span></div>

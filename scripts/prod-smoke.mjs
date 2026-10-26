@@ -24,6 +24,12 @@ try {
   await sleep(4000);
   const n = await st(p, (s) => [s.products.length, s.ingredients.length, s.recentSales.length, s.rate]);
   ok('Demo real con datos', n[0] >= 12 && n[1] >= 20 && n[2] > 10, JSON.stringify(n));
+  ok('Recorrido guiado abierto al entrar', !!(await p.$('.tour-tip')));
+  await p.evaluate(async () => (await import('/js/tour.js')).stopTour());
+  const pins = await st(p, (s) => Promise.all([s.verifyPin('1234'), s.verifyPin('9999')]));
+  ok('PIN de la demo 1234 (y rechaza otros)', pins[0] === true && pins[1] === false, JSON.stringify(pins));
+  const vid = await p.evaluate(() => new Promise((res) => { const v = document.createElement('video'); v.muted = true; v.src = '/tutorial/sano-restaurant-tutorial.mp4'; v.onloadedmetadata = () => res(v.duration); v.onerror = () => res(-1); setTimeout(() => res(-2), 20000); }));
+  ok('Video tutorial disponible en la web', vid > 300, vid.toFixed(1) + ' s');
   await p.screenshot({ path: process.argv[2] + '/prod-demo.png' });
   const uid = await p.evaluate(async () => (await import('/js/firebase.js')).auth.currentUser.uid);
   await p.evaluate(() => document.getElementById('demo-end').click());

@@ -73,7 +73,7 @@ export function mount(el, { navigate }) {
   }
 
   function tableActions(t, o) {
-    const totals = orderTotals(o.items || [], { servicePct: Number(store.settings.serviceCharge) || 0 });
+    const totals = orderTotals(o.items || []);
     const m = openModal({
       title: `${esc(t.name)} · Pedido #${esc(o.orderNo)}`,
       sub: `Abierta hace ${fmtAgo(o.createdAt)}${o.waiter ? ' · ' + esc(o.waiter) : ''}`,

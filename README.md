@@ -45,8 +45,13 @@ La app instalada es la misma web: al publicar cambios, todos los equipos se actu
 Crear sedes nuevas (con usuario, contraseña, PIN, plan y fecha de pago), entrar a cualquier sede, **congelar** con motivo y reactivar, **renovar** 30 días, editar dueño, teléfono, plan y vencimiento, reiniciar el PIN, enviar el acceso por WhatsApp, eliminar (con opción de borrar los datos) y restaurar, publicar un **aviso general** para todas las sedes y exportar la lista.
 Cuando vence la fecha de pago, la sede se bloquea sola. Las reglas de Firestore lo aplican también en el servidor.
 
+## Ayuda, recorridos y video
+- **Recorrido guiado:** al entrar a la demo se abre solo. Oscurece la pantalla, ilumina cada zona y explica para qué sirve. Desde el menú **Ayuda y tutorial** (o el botón *Ayuda* de Inicio) se repite el recorrido general o los de cada sección: Vender, Mesas y cocina, Menú y recetas, Inventario y Caja.
+- **Video tutorial** (5 min, voz en español venezolano, con subtítulos): botón *Ver video tutorial* en el login y en Ayuda. Está en `public/tutorial/sano-restaurant-tutorial.mp4`, con copia en `Tutorial/` para compartir.
+  Para regenerarlo después de cambiar la app: arranca los emuladores y corre `node scripts/tutorial/make-video.mjs` (necesita ffmpeg y `pip install edge-tts`).
+
 ## Demo
-El botón **"Probar demo gratis"** del inicio de sesión crea un negocio de ejemplo aislado (menú con recetas, mesas, clientes, ventas de la semana y comandas en cocina) que dura 30 minutos y se borra al terminar.
+El botón **"Probar demo gratis"** del inicio de sesión crea un negocio de ejemplo aislado (menú con recetas, mesas, clientes, ventas de la semana y comandas en cocina) que dura 30 minutos y se borra al terminar. **El PIN de administrador de todas las demos es 1234**, y se muestra en la franja de la demo y al pedir el PIN.
 
 ## Estructura
 ```
@@ -57,7 +62,8 @@ public/                 App web (Firebase Hosting), JS modular sin compilación
   js/views/*.js         Secciones de la app y panel admin
 firestore.rules         Seguridad: sedes aisladas, congelación, vencimiento, demo
 scripts/provision.mjs   Crea/actualiza las sedes:  node provision.mjs 25
-scripts/e2e.mjs         Prueba completa (39 verificaciones) con emuladores
+scripts/e2e.mjs         Prueba general (42 verificaciones) con emuladores
+scripts/e2e-flows.mjs   Pedido completo de cada tipo: para llevar, mesa con 2 rondas y delivery (47 verificaciones)
 scripts/prod-smoke.mjs  Prueba rápida en producción
 scripts/pwa-check.mjs   Verifica que la app sea instalable en PC y Android
 scripts/screens.mjs     Regenera las capturas que muestra Chrome al instalar
@@ -71,7 +77,7 @@ cd scripts && node provision.mjs 25            # crear más sedes (conserva las 
 
 # Pruebas locales
 firebase emulators:start --only auth,firestore,hosting      (con JAVA_HOME del JBR de Android Studio)
-sh scripts/test-emu.sh
+sh scripts/test-emu.sh && node scripts/e2e-flows.mjs
 ```
 
 ## Archivos que debes respaldar (no van a git)

@@ -3,7 +3,10 @@ import { auth, db, doc, collection, writeBatch, getDoc, getDocs, Timestamp, sign
 import { store, DEFAULT_SETTINGS } from './store.js';
 import { chargeSale, saveOrder, setTicketStatus, cleanLine } from './ops.js';
 import { fetchBcvRate } from './shared.js';
-import { round2, nowISO, todayKey, dayKey, addDays, docNumber, shortId } from './utils.js';
+import { round2, nowISO, todayKey, dayKey, addDays, docNumber, shortId, sha256 } from './utils.js';
+
+/** PIN de administrador de todas las demos (se muestra en pantalla) */
+export const DEMO_PIN = '1234';
 
 export const DEMO_MINUTES = 30;
 const DATA_COLLECTIONS = ['ingredients', 'products', 'tables', 'orders', 'tickets', 'customers', 'cash_shifts', 'cash_movements', 'sales', 'inventory_logs', 'config'];
@@ -111,8 +114,9 @@ export async function createDemoTenant(uid) {
   const b = writeBatch(db);
   b.set(ref('config', 'settings'), {
     ...DEFAULT_SETTINGS, businessName: 'Perros & Burgers Demo', rif: 'J-00000000-0', phone: '0414-0000000', address: 'Av. Principal, Local 1', instagram: '@sanorestaurant',
-    receiptFooter: '¡Gracias por probar SANO Restaurant!', rate, rateUpdatedAt: nowISO(), rateSource: 'bcv', serviceCharge: 10, deliveryFee: 1.5, staff: ['Carlos', 'María', 'José']
+    receiptFooter: '¡Gracias por probar SANO Restaurant!', rate, rateUpdatedAt: nowISO(), rateSource: 'bcv', deliveryFee: 1.5, staff: ['Carlos', 'María', 'José']
   });
+  b.set(ref('config', 'security'), { pinHash: await sha256(`${uid}:${DEMO_PIN}`), updatedAt: nowISO() });
   const tables = [['Mesa 1', 'Salón'], ['Mesa 2', 'Salón'], ['Mesa 3', 'Salón'], ['Mesa 4', 'Salón'], ['Mesa 5', 'Salón'], ['Mesa 6', 'Salón'], ['Terraza 1', 'Terraza'], ['Terraza 2', 'Terraza'], ['Terraza 3', 'Terraza']];
   tables.forEach(([name, zone]) => b.set(ref('tables'), { name, zone, seats: 4, createdAt: nowISO() }));
   for (const [name, phone, address] of [['María González', '0414-1234567', 'Urb. El Centro, calle 3, casa 12'], ['José Rodríguez', '0424-7654321', 'Res. Los Pinos, torre B, apto 4-2'], ['Carmen Pérez', '0412-5551234', 'Sector La Esperanza, frente a la plaza']]) {
@@ -153,7 +157,7 @@ export async function seedDemoActivity() {
       const type = ['llevar', 'mesa', 'delivery', 'llevar'][i % 4];
       b.set(store.newRef('sales'), {
         number: docNumber('V'), orderNo: i + 1, type, typeLabel: { llevar: 'Para llevar', mesa: 'Mesa', delivery: 'Delivery' }[type], tableName: type === 'mesa' ? `Mesa ${1 + (i % 6)}` : '',
-        date: date.toISOString(), dayKey: dayKey(date), items, subtotal: total, discount: 0, service: 0, delivery: 0, tip: 0, total, cost: round2(total * 0.36),
+        date: date.toISOString(), dayKey: dayKey(date), items, subtotal: total, discount: 0, delivery: 0, tip: 0, total, cost: round2(total * 0.36),
         rate, totalBs: round2(total * rate), payments: [{ method: m, currency: cur, amount: cur === 'BS' ? round2(total * rate) : total, usd: total }], paidUSD: total, changeUSD: 0, changeCurrency: 'BS', method: m,
         customerId: null, customerName: 'Mostrador', consumption: [], status: 'completed', shiftId: 'historial', by: 'demo'
       });

@@ -29,7 +29,7 @@ const config = {
 
 const SETTINGS = {
   rif: '', phone: '', address: '', instagram: '', receiptFooter: '¡Gracias por tu compra! Vuelve pronto.', receiptFormat: '80mm',
-  rate: 0, rateUpdatedAt: null, rateAuto: true, iva: 0, serviceCharge: 0, deliveryFee: 1, allowNoStock: false, printKitchen: false,
+  rate: 0, rateUpdatedAt: null, rateAuto: true, iva: 0, deliveryFee: 1, allowNoStock: false, printKitchen: false,
   categories: ['Perros calientes', 'Hamburguesas', 'Pizzas', 'Combos', 'Arepas', 'Pepitos', 'Acompañantes', 'Bebidas', 'Postres'],
   ingredientCategories: ['Panes y masas', 'Carnes y embutidos', 'Quesos y lácteos', 'Vegetales', 'Salsas', 'Bebidas', 'Empaques', 'Otros'],
   zones: ['Salón', 'Terraza'], staff: []

@@ -215,7 +215,7 @@ export function mount(el, { navigate, params = {} }) {
             <div class="cline-total">${usd(l.total)}</div>
             <div class="cline-meta">${usd(l.unitPrice)} c/u${l.extras?.length ? ' · + ' + l.extras.map((e) => esc(e.name)).join(', ') : ''}${l.note ? ` · <span class="note">${esc(l.note)}</span>` : ''}</div>
             <div class="cline-actions">
-              ${l.sent ? `<span class="badge badge-success">${icon('chef')} En cocina</span><span></span>` : `
+              ${l.sent ? (l.kitchen ? `<span class="badge badge-success">${icon('chef')} En cocina</span><span></span>` : `<span class="badge badge-neutral">${icon('check')} Registrado</span><span></span>`) : `
               <div class="stepper"><button data-dec="${l.lineId}" aria-label="Menos">${icon('minus')}</button><span>${l.qty}</span><button data-inc="${l.lineId}" aria-label="Más">${icon('plus')}</button></div>
               <div class="row"><button class="btn btn-ghost btn-sm" data-edit="${l.lineId}">${icon('edit')} Nota</button><button class="btn btn-ghost btn-icon btn-sm" data-del="${l.lineId}" aria-label="Quitar">${icon('trash')}</button></div>`}
             </div>
@@ -259,7 +259,7 @@ export function mount(el, { navigate, params = {} }) {
     };
     if ($('#c-waiter')) $('#c-waiter').onchange = (e) => { draft.waiter = e.target.value; };
     if ($('#c-addr')) $('#c-addr').oninput = (e) => { draft.address = e.target.value; };
-    if ($('#c-prebill')) $('#c-prebill').onclick = () => printPreBill({ ...(existing || {}), tableName: table?.name, orderNo: existing?.orderNo || '—', items: draft.lines }, orderTotals(draft.lines, { servicePct: Number(store.settings.serviceCharge) || 0 }));
+    if ($('#c-prebill')) $('#c-prebill').onclick = () => printPreBill({ ...(existing || {}), tableName: table?.name, orderNo: existing?.orderNo || '—', items: draft.lines }, orderTotals(draft.lines));
     if ($('#c-send')) $('#c-send').onclick = (e) => persist(e.currentTarget, true);
     if ($('#c-save')) $('#c-save').onclick = (e) => persist(e.currentTarget, true);
     $('#c-pay').onclick = pay;

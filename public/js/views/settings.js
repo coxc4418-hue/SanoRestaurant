@@ -48,7 +48,6 @@ export function mount(el) {
       <form class="card stack" id="f-sales">
         <div class="form-grid">
           <div class="field"><label>IVA incluido en los precios (%)</label><input class="input" name="iva" inputmode="decimal" value="${num(s().iva || 0, 0)}"><span class="hint">Solo se muestra desglosado en el recibo. 0 para no mostrarlo.</span></div>
-          <div class="field"><label>Cargo por servicio en mesa (%)</label><input class="input" name="serviceCharge" inputmode="decimal" value="${num(s().serviceCharge || 0, 0)}"><span class="hint">Se sugiere al cobrar mesas; puedes cambiarlo en cada cobro.</span></div>
           <div class="field"><label>Costo de delivery por defecto ($)</label><input class="input" name="deliveryFee" inputmode="decimal" value="${num(s().deliveryFee || 0)}"></div>
         </div>
         <label class="check box box-white"><span class="switch"><input type="checkbox" name="allowNoStock" ${s().allowNoStock ? 'checked' : ''}><span></span></span><span><b>Permitir vender sin stock</b><br><small class="muted">Si está apagado, no se puede vender un producto cuyos ingredientes se agotaron.</small></span></label>
@@ -58,7 +57,7 @@ export function mount(el) {
       $('#s-rate').onclick = openRateModal;
       $('#f-sales').onsubmit = async (e) => {
         e.preventDefault(); const F = e.target.elements;
-        await store.saveSettings({ iva: parseNum(F.iva.value), serviceCharge: parseNum(F.serviceCharge.value), deliveryFee: parseNum(F.deliveryFee.value), allowNoStock: F.allowNoStock.checked, printKitchen: F.printKitchen.checked });
+        await store.saveSettings({ iva: parseNum(F.iva.value), deliveryFee: parseNum(F.deliveryFee.value), allowNoStock: F.allowNoStock.checked, printKitchen: F.printKitchen.checked });
         toast('Configuración de ventas guardada');
       };
     }
@@ -85,6 +84,7 @@ export function mount(el) {
       </div>`;
       $('#f-pin').onsubmit = async (e) => {
         e.preventDefault(); const F = e.target.elements;
+        if (store.isDemo) { toast('En la demo el PIN siempre es 1234.', 'info'); return; }
         if (!/^\d{4,12}$/.test(F.pin.value)) { toast('El PIN debe tener de 4 a 12 dígitos', 'warning'); return; }
         if (F.pin.value !== F.pin2.value) { toast('Los PIN no coinciden', 'warning'); return; }
         if (store.hasPin() && !(await requirePin('Cambiar el PIN'))) return;

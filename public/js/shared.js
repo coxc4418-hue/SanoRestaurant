@@ -147,7 +147,6 @@ export function receiptHTML(sale) {
     <table>
       <tr><td colspan="2">Subtotal</td><td class="r">$${num(sale.subtotal)}</td></tr>
       ${sale.discount > 0 ? `<tr><td colspan="2">Descuento</td><td class="r">-$${num(sale.discount)}</td></tr>` : ''}
-      ${sale.service > 0 ? `<tr><td colspan="2">Servicio ${num(sale.servicePct, 0)}%</td><td class="r">$${num(sale.service)}</td></tr>` : ''}
       ${sale.delivery > 0 ? `<tr><td colspan="2">Delivery</td><td class="r">$${num(sale.delivery)}</td></tr>` : ''}
       ${sale.tip > 0 ? `<tr><td colspan="2">Propina</td><td class="r">$${num(sale.tip)}</td></tr>` : ''}
       <tr class="big"><td colspan="2">TOTAL $</td><td class="r">$${num(sale.total)}</td></tr>
@@ -179,7 +178,6 @@ export function printPreBill(order, totals) {
     <div class="hr"></div>
     <table>
       <tr><td colspan="2">Subtotal</td><td class="r">$${num(totals.subtotal)}</td></tr>
-      ${totals.service > 0 ? `<tr><td colspan="2">Servicio</td><td class="r">$${num(totals.service)}</td></tr>` : ''}
       <tr class="big"><td colspan="2">TOTAL $</td><td class="r">$${num(totals.total)}</td></tr>
       <tr class="big"><td colspan="2">TOTAL Bs</td><td class="r">${num(totals.total * store.rate)}</td></tr>
     </table>

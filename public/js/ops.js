@@ -40,14 +40,13 @@ export function lineLabel(l) {
 }
 
 /** Totales de un pedido */
-export function orderTotals(lines, { discount = 0, servicePct = 0, deliveryFee = 0, tip = 0 } = {}) {
+export function orderTotals(lines, { discount = 0, deliveryFee = 0, tip = 0 } = {}) {
   const subtotal = round2(lines.reduce((a, l) => a + (Number(l.total) || 0), 0));
   const disc = Math.min(round2(discount), subtotal);
-  const service = round2((subtotal - disc) * (Number(servicePct) || 0) / 100);
   const delivery = round2(deliveryFee);
   const tipV = round2(tip);
-  const total = round2(subtotal - disc + service + delivery + tipV);
-  return { subtotal, discount: disc, service, delivery, tip: tipV, total };
+  const total = round2(subtotal - disc + delivery + tipV);
+  return { subtotal, discount: disc, delivery, tip: tipV, total };
 }
 
 function ticketItems(lines) {
@@ -63,10 +62,14 @@ function orderLabel(o) {
   return `Para llevar${o.customerName && o.customerName !== 'Mostrador' ? ' · ' + o.customerName : ''}`;
 }
 
-/** Agrega al lote un ticket de cocina con las líneas que aún no se han enviado. Devuelve las líneas marcadas. */
+/**
+ * Agrega al lote un ticket de cocina con las líneas de cocina que aún no se han enviado.
+ * Devuelve todas las líneas marcadas como registradas (las bebidas también, aunque no van a cocina).
+ */
 function addKitchenTicket(b, order, lines) {
   const pending = lines.filter((l) => l.kitchen && !l.sent);
-  if (!pending.length) return lines;
+  const mark = (ls) => ls.map((l) => (l.sent ? l : { ...l, sent: true, sentAt: nowISO() }));
+  if (!pending.length) return mark(lines);
   const round = (Number(order.rounds) || 0) + 1;
   b.set(store.newRef('tickets'), {
     orderId: order.id || null, orderNo: order.orderNo, type: order.type, label: orderLabel(order),
@@ -74,7 +77,7 @@ function addKitchenTicket(b, order, lines) {
     status: 'pendiente', active: true, createdAt: nowISO(), date: nowISO()
   });
   order.rounds = round;
-  return lines.map((l) => (l.kitchen && !l.sent ? { ...l, sent: true, sentAt: nowISO() } : l));
+  return mark(lines);
 }
 
 // ======================================================================
@@ -155,6 +158,18 @@ export async function setTicketStatus(ticket, status) {
 // ======================================================================
 // VENTAS
 // ======================================================================
+/**
+ * Lo que realmente queda por forma de pago (en $): lo pagado menos el vuelto,
+ * que se descuenta del efectivo en la moneda en que se entregó. Suma igual al total vendido.
+ */
+export function methodNet(sale) {
+  const m = {};
+  (sale.payments || []).forEach((p) => { m[p.method] = round4((m[p.method] || 0) + (p.usd || 0)); });
+  const ch = Number(sale.changeUSD) || 0;
+  if (ch > 0.004) { const k = sale.changeCurrency === 'BS' ? 'efectivo_bs' : 'efectivo_usd'; m[k] = round4((m[k] || 0) - ch); }
+  return m;
+}
+
 /** Calcula el flujo de efectivo de los pagos y el vuelto */
 export function cashFlowOf(payments, changeUSD, changeCurrency, rate) {
   const f = FLOW0();
@@ -182,7 +197,7 @@ function shiftIncrements(flow, extra = {}) {
  * Cobra una venta (rápida o de un pedido abierto). Descuenta los insumos según las recetas.
  * payments: [{method, amount}] (amount en la moneda del método)
  */
-export async function chargeSale({ order = null, type = 'llevar', tableId = null, lines, customer = null, discount = 0, servicePct = 0, deliveryFee = 0, tip = 0, payments = [], changeCurrency = 'BS', note = '', waiter = '', people = 0, address = '' }) {
+export async function chargeSale({ order = null, type = 'llevar', tableId = null, lines, customer = null, discount = 0, deliveryFee = 0, tip = 0, payments = [], changeCurrency = 'BS', note = '', waiter = '', people = 0, address = '' }) {
   const rate = store.rate;
   if (!(rate > 0)) throw new Error('Configura la tasa del día antes de cobrar.');
   const shift = store.openShift;
@@ -198,7 +213,7 @@ export async function chargeSale({ order = null, type = 'llevar', tableId = null
     }
   }
 
-  const t = orderTotals(clean, { discount, servicePct, deliveryFee: type === 'delivery' ? deliveryFee : 0, tip });
+  const t = orderTotals(clean, { discount, deliveryFee: type === 'delivery' ? deliveryFee : 0, tip });
   const pays = payments.filter((p) => p.amount > 0.004).map((p) => {
     const cur = PAY_METHODS[p.method]?.cur || 'USD';
     return { method: p.method, currency: cur, amount: round2(p.amount), usd: round4(cur === 'BS' ? p.amount / rate : p.amount) };
@@ -247,7 +262,6 @@ export async function chargeSale({ order = null, type = 'llevar', tableId = null
     date, dayKey: todayKey(),
     items: clean.map(({ sent, sentAt, addedAt, ...l }) => l),
     ...t,
-    servicePct: Number(servicePct) || 0,
     cost,
     rate, totalBs: round2(t.total * rate),
     payments: pays, paidUSD, changeUSD, changeCurrency,
@@ -272,8 +286,8 @@ export async function chargeSale({ order = null, type = 'llevar', tableId = null
 
   // Caja
   const byMethod = {};
-  pays.forEach((p) => { byMethod[`byMethod.${p.method}`] = (byMethod[`byMethod.${p.method}`] || 0) + p.usd; });
-  b.update(store.ref('cash_shifts', shift.id), shiftIncrements(flow, { salesCount: 1, salesTotal: t.total, tipsTotal: t.tip, serviceTotal: t.service, ...byMethod }));
+  for (const [k, v] of Object.entries(methodNet({ payments: pays, changeUSD, changeCurrency }))) byMethod[`byMethod.${k}`] = v;
+  b.update(store.ref('cash_shifts', shift.id), shiftIncrements(flow, { salesCount: 1, salesTotal: t.total, tipsTotal: t.tip, ...byMethod }));
 
   // Cliente
   const custId = customer?.id || order?.customerId;
@@ -302,8 +316,8 @@ export async function voidSale(sale, reason = '') {
   if (shift) {
     const extra = {};
     if (sale.shiftId === shift.id) {
-      extra.salesCount = -1; extra.salesTotal = -(sale.total || 0); extra.tipsTotal = -(sale.tip || 0); extra.serviceTotal = -(sale.service || 0);
-      (sale.payments || []).forEach((p) => { extra[`byMethod.${p.method}`] = (extra[`byMethod.${p.method}`] || 0) - p.usd; });
+      extra.salesCount = -1; extra.salesTotal = -(sale.total || 0); extra.tipsTotal = -(sale.tip || 0);
+      for (const [k, v] of Object.entries(methodNet(sale))) extra[`byMethod.${k}`] = -v;
     }
     b.update(store.ref('cash_shifts', shift.id), shiftIncrements(reverse, extra));
     if (reverse.inUSD || reverse.inBs || reverse.outUSD || reverse.outBs) {

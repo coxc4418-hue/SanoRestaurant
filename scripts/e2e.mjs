@@ -65,6 +65,9 @@ try {
   await page.click('#lg-demo');
   await page.waitForSelector('.sb-nav', { timeout: 40000 });
   await waitText(page, 'Modo demo');
+  await page.waitForSelector('.tour-tip', { timeout: 15000 });
+  ok('Recorrido guiado se abre solo en la demo', true);
+  await page.click('.tour-tip [data-t="stop"]');
   await sleep(2500);
   const nProducts = await store(page, (s) => s.products.length);
   const nIngr = await store(page, (s) => s.ingredients.length);
@@ -158,8 +161,7 @@ try {
   await waitText(page, 'Pedido #');
   await clickText(page, '.modal [data-a="pay"]', 'Cobrar');
   await waitText(page, 'Total a cobrar');
-  const svc = await page.$eval('.modal [data-svc]', (e) => e.value);
-  ok('Servicio 10% sugerido en mesa', svc === '10', svc);
+  ok('Sin cargo por servicio en el cobro', !(await page.$('.modal [data-svc]')) && !(await page.evaluate(() => document.querySelector('.modal').innerText.includes('Servicio'))));
   await page.click('.modal [data-ok]');
   await waitText(page, 'Listo', 10000);
   await sleep(800);
@@ -223,6 +225,12 @@ try {
   console.log('\n9) Reportes y caja');
   await nav(page, 'reportes');
   await page.waitForSelector('.modal [data-pin]');
+  ok('El PIN de la demo se muestra (1234)', await page.evaluate(() => document.querySelector('.modal').innerText.includes('1234')));
+  await page.type('.modal [data-pin]', '9999');
+  await page.click('.modal [data-ok]');
+  await sleep(400);
+  ok('PIN incorrecto rechazado', await page.evaluate(() => document.querySelector('.modal [data-err]')?.textContent.includes('incorrecto')));
+  await page.$eval('.modal [data-pin]', (e) => { e.value = ''; });
   await page.type('.modal [data-pin]', '1234');
   await page.click('.modal [data-ok]');
   await waitText(page, 'Ganancia bruta');

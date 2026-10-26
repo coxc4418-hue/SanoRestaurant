@@ -68,7 +68,7 @@ export function requirePin(reason = 'Acción protegida') {
     let ok = false;
     const m = openModal({
       title: 'PIN de administrador',
-      sub: esc(reason),
+      sub: esc(reason) + (store.isDemo ? '<br><b class="text-brand">En la demo el PIN es 1234</b>' : ''),
       size: 'sm',
       body: `
         <form class="stack" data-f>

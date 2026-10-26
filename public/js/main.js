@@ -87,7 +87,7 @@ function renderLogin() {
           </form>
           <div class="auth-or"><span>¿Quieres conocerlo?</span></div>
           <button class="btn btn-demo btn-lg btn-block" id="lg-demo" type="button">${icon('sparkle')} Probar demo gratis · 30 min</button>
-          <p class="hint center mt">Sin registro. Incluye un menú de ejemplo con recetas, mesas y ventas; se borra al terminar.</p>
+          <p class="hint center mt">Sin registro. Incluye un menú de ejemplo con recetas, mesas y ventas; se borra al terminar. PIN de la demo: <b>1234</b>.</p>
           <a class="btn btn-whatsapp btn-lg btn-block mt" id="lg-wa" href="${salesWa()}" target="_blank" rel="noopener">${icon('whatsapp')} Contratar SANO Restaurant</a>
           <p class="hint center mt">WhatsApp: <b>${SALES_PHONE_FMT}</b></p>
           ${isStandalone() ? '' : `<div class="install-card mt-lg">
@@ -95,6 +95,7 @@ function renderLogin() {
             <div class="grow"><b>Instala la app</b><span>${platform() === 'desktop' ? 'Acceso directo en tu computadora' : 'Ícono en tu teléfono'}, sin tiendas ni descargas.</span></div>
             <button type="button" class="btn btn-primary btn-sm" data-install>${icon('install')} Instalar</button>
           </div>`}
+          <button type="button" class="btn btn-ghost btn-block mt" id="lg-video">${icon('eye')} Ver video tutorial (5 min)</button>
           <p class="auth-foot">¿Olvidaste tu contraseña? Escríbenos por WhatsApp.</p>
         </div>
       </section>
@@ -131,6 +132,7 @@ function renderLogin() {
     }
   };
   bindInstallButtons(root());
+  $('#lg-video').onclick = () => import('./tour.js').then((t) => t.openVideo());
   setTimeout(() => $('#lg-user')?.focus(), 50);
   if (demoEndedNotice) showDemoEnded();
 }
@@ -239,7 +241,7 @@ async function enterDemo(user) {
   navigate('inicio', { replace: true });
   hideBoot();
   startDemoTimer();
-  if (!t) setTimeout(() => toast('¡Bienvenido! Tienes 30 minutos para probar SANO Restaurant con datos de ejemplo.', 'info', 5500), 400);
+  if (!t) setTimeout(() => import('./tour.js').then((m) => m.startTour('general')), 900);
 }
 
 function startDemoTimer() {
@@ -305,7 +307,7 @@ function navItems() {
   return Object.entries(groups).map(([g, items]) => `
     <div class="sb-section">${g}</div>
     ${items.map(([id, r]) => `<button class="nav-item" data-nav="${id}">${icon(r.icon)}<span>${r.title}</span><span class="nav-badge" data-badge="${id}" hidden></span></button>`).join('')}
-  `).join('');
+  `).join('') + `<button class="nav-item" id="sb-help">${icon('info')}<span>Ayuda y tutorial</span></button>`;
 }
 
 function planWarning() {
@@ -340,7 +342,7 @@ function renderShell() {
       <div class="sidebar-backdrop" id="sb-backdrop"></div>
       <div class="main">
         ${session.isSuper ? `<div class="banner admin-banner"><span>${icon('shield')} Modo administrador · <b>${esc(tName)}</b></span><button id="ab-back">← Volver al panel de sedes</button></div>` : ''}
-        ${store.isDemo ? `<div class="banner demo-banner"><span>${icon('sparkle')} <b>Modo demo</b><span class="hide-sm"> · datos de ejemplo, se borran al terminar</span></span><span class="demo-clock">${icon('clock')} <b id="demo-left">30:00</b><button id="demo-end">Terminar</button></span></div>` : ''}
+        ${store.isDemo ? `<div class="banner demo-banner"><span>${icon('sparkle')} <b>Modo demo</b><span class="hide-sm"> · datos de ejemplo, se borran al terminar</span> · PIN <b>1234</b></span><span class="demo-clock">${icon('clock')} <b id="demo-left">30:00</b><button id="demo-end">Terminar</button></span></div>` : ''}
         ${planWarning()}
         <div id="announce"></div>
         <div class="offline-banner" id="offline-banner" hidden>Sin conexión: puedes seguir vendiendo, los cambios se sincronizan al volver internet.</div>
@@ -364,6 +366,7 @@ function renderShell() {
 
   $$('[data-nav]').forEach((b) => b.addEventListener('click', () => { navigate(b.dataset.nav); closeSidebar(); }));
   $('#tb-menu').onclick = openSidebar;
+  $('#sb-help').onclick = () => { closeSidebar(); import('./tour.js').then((t) => t.openHelp()); };
   $('#bn-more').onclick = openSidebar;
   $('#sb-backdrop').onclick = closeSidebar;
   $('#sb-rate').onclick = openRateModal;

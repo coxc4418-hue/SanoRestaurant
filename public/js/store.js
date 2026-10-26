@@ -44,7 +44,6 @@ const DEFAULT_SETTINGS = {
   rateUpdatedAt: null,
   rateAuto: true,
   iva: 0,
-  serviceCharge: 0,
   deliveryFee: 1,
   allowNoStock: false,
   printKitchen: false,
