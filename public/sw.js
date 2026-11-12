@@ -1,5 +1,5 @@
 // SANO Restaurant — Service Worker (PWA, funcionamiento sin conexión)
-const VERSION = 'sanorestaurant-v1.3.0';
+const VERSION = 'sanorestaurant-v1.3.2';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const VIEWS = ['dashboard', 'pos', 'tables', 'orders', 'kitchen', 'menu', 'inventory', 'customers', 'cash', 'reports', 'settings', 'admin'];
 const SHELL = [

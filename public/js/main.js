@@ -326,6 +326,7 @@ function renderShell() {
       <aside class="sidebar" id="sidebar">
         <div class="sb-brand"><img src="/assets/logo.svg" alt=""><div><b>SANO Restaurant</b><small>Comida rápida</small></div></div>
         <div class="sb-tenant"><div class="xs">Negocio</div><b id="sb-tenant-name">${esc(tName)}</b></div>
+        <button class="sb-search" id="sb-search">${icon('search')}<span>Buscar plato, cliente, mesa…</span><kbd>Ctrl K</kbd></button>
         <nav class="sb-nav">${navItems()}</nav>
         <div class="sb-foot">
           <button class="rate-pill" id="sb-rate" title="Cambiar tasa del día"><span>Tasa del día</span><b id="sb-rate-val">Bs ${num(store.rate)}</b></button>
@@ -351,6 +352,7 @@ function renderShell() {
           <img src="/assets/logo.svg" alt="">
           <div class="grow" style="min-width:0"><div class="tb-title ellipsis" id="tb-title">SANO Restaurant</div><div class="tb-sub ellipsis">${esc(tName)}</div></div>
           ${isStandalone() ? '' : `<button class="btn btn-ghost btn-icon" data-install aria-label="Instalar app" title="Instalar app">${icon('install')}</button>`}
+          <button class="btn btn-ghost btn-icon btn-sm" id="tb-search" aria-label="Buscar" title="Buscar (Ctrl + K)">${icon('search')}</button>
           <button class="rate-mini" id="tb-rate">Bs ${num(store.rate)}</button>
         </header>
         <main class="content" id="view"></main>
@@ -366,6 +368,8 @@ function renderShell() {
 
   $$('[data-nav]').forEach((b) => b.addEventListener('click', () => { navigate(b.dataset.nav); closeSidebar(); }));
   $('#tb-menu').onclick = openSidebar;
+  $('#tb-search') && ($('#tb-search').onclick = openSearch);
+  $('#sb-search').onclick = () => { closeSidebar(); openSearch(); };
   $('#sb-help').onclick = () => { closeSidebar(); import('./tour.js').then((t) => t.openHelp()); };
   $('#bn-more').onclick = openSidebar;
   $('#sb-backdrop').onclick = closeSidebar;
@@ -483,8 +487,10 @@ window.addEventListener('popstate', () => {
   if (document.getElementById('view') && ROUTES[id] && id !== currentRoute) navigate(id, { replace: true });
 });
 
+export function openSearch() { import('./views/search.js').then((m) => m.openSearch()); }
 window.addEventListener('keydown', (e) => {
   if (!document.getElementById('view')) return;
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); }
   if (e.key === 'F1') { e.preventDefault(); navigate('vender'); }
   if (e.key === 'F2') { e.preventDefault(); navigate('mesas'); }
   if (e.key === 'F3') { e.preventDefault(); navigate('cocina'); }
