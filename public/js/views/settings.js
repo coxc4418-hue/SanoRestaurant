@@ -1,7 +1,7 @@
 // SANO Restaurant — Configuración
 import { store, updateTenant } from '../store.js';
 import { requirePin, changePassword, authErrorMessage, session } from '../auth.js';
-import { esc, num, toast, parseNum, setBusy, toggleTheme, download, nowISO } from '../utils.js';
+import { esc, num, toast, parseNum, setBusy, toggleTheme, download, nowISO, bs } from '../utils.js';
 import { icon } from '../icons.js';
 import { openRateModal, salesWa, SALES_PHONE_FMT } from '../shared.js';
 import { isStandalone, bindInstallButtons } from '../install.js';
@@ -44,7 +44,7 @@ export function mount(el) {
       $('#s-theme').onclick = (e) => { const n = toggleTheme(); e.currentTarget.innerHTML = `${icon(n === 'dark' ? 'sun' : 'moon')} Cambiar tema`; };
     }
     if (sec === 'ventas') {
-      body.innerHTML = `<div class="card between row-wrap mb"><div><div class="bold">Tasa del día: Bs ${num(store.rate)} por $1</div><div class="small muted">${s().rateAuto !== false ? 'Se actualiza automáticamente con la tasa oficial BCV cada día.' : 'Tasa manual.'}</div></div><button class="btn btn-secondary" id="s-rate">${icon('refresh')} Cambiar tasa</button></div>
+      body.innerHTML = `<div class="card between row-wrap mb"><div><div class="bold">Tasa del día: ${bs(store.rate)} por $1</div><div class="small muted">${s().rateAuto !== false ? 'Se actualiza automáticamente con la tasa oficial BCV cada día.' : 'Tasa manual.'}</div></div><button class="btn btn-secondary" id="s-rate">${icon('refresh')} Cambiar tasa</button></div>
       <form class="card stack" id="f-sales">
         <div class="form-grid">
           <div class="field"><label>IVA incluido en los precios (%)</label><input class="input" name="iva" inputmode="decimal" value="${num(s().iva || 0, 0)}"><span class="hint">Solo se muestra desglosado en el recibo. 0 para no mostrarlo.</span></div>

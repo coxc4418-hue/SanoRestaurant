@@ -1,7 +1,7 @@
 // SANO Restaurant — Menú, precios y recetas
 import { store, unitShort, UNITS } from '../store.js';
 import { requirePin } from '../auth.js';
-import { esc, usd, bs, num, toast, openModal, confirmDialog, emptyState, normalize, debounce, parseNum, nowISO, shortId, round2, compressImage, setBusy } from '../utils.js';
+import { esc, usd, bs, num, toast, openModal, confirmDialog, emptyState, normalize, debounce, parseNum, nowISO, shortId, round2, compressImage, setBusy, loc, isVE } from '../utils.js';
 import { icon } from '../icons.js';
 import { ingredientForm } from './inventory.js';
 
@@ -144,7 +144,7 @@ export function productForm(p = null) {
     kitchen: p?.kitchen !== false, available: p?.available !== false
   };
   const m = openModal({
-    title: isEdit ? `Editar ${esc(p.name)}` : 'Nuevo producto', sub: 'Precio en dólares; el precio en bolívares se calcula con la tasa del día.', size: 'xl',
+    title: isEdit ? `Editar ${esc(p.name)}` : 'Nuevo producto', sub: isVE() ? 'Precio en dólares; el precio en bolívares se calcula con la tasa del día.' : `Precio en ${loc().curName.toLowerCase()} (${loc().sym}).`, size: 'xl',
     body: `<form class="stack" data-f autocomplete="off">
       <div class="grid-main" style="grid-template-columns:1.3fr 1fr">
         <div class="stack">
@@ -237,7 +237,7 @@ export function productForm(p = null) {
   function renderPrice() {
     const sec = $('[data-sec-price]');
     if (st.kind === 'reventa') {
-      sec.innerHTML = `<div class="box"><div class="form-grid"><div class="field"><label>Precio de venta ($) *</label><div class="input-group"><span class="prefix">$</span><input class="input" data-price inputmode="decimal" value="${st.price !== '' ? num(st.price) : ''}" placeholder="0,00"></div><span class="hint" data-pbs></span></div><div data-margin></div></div></div>`;
+      sec.innerHTML = `<div class="box"><div class="form-grid"><div class="field"><label>Precio de venta ($) *</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input" data-price inputmode="decimal" value="${st.price !== '' ? num(st.price) : ''}" placeholder="0,00"></div><span class="hint" data-pbs></span></div><div data-margin></div></div></div>`;
       bindPrice(); renderMargin(); return;
     }
     sec.innerHTML = `<div class="box">
@@ -254,7 +254,7 @@ export function productForm(p = null) {
     };
     const body = $('[data-pricebody]');
     if (!st.hasVariants) {
-      body.innerHTML = `<div class="form-grid"><div class="field"><label>Precio de venta ($) *</label><div class="input-group"><span class="prefix">$</span><input class="input" data-price inputmode="decimal" value="${st.price !== '' ? num(st.price) : ''}" placeholder="0,00"></div><span class="hint" data-pbs></span></div><div data-margin></div></div>
+      body.innerHTML = `<div class="form-grid"><div class="field"><label>Precio de venta ($) *</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input" data-price inputmode="decimal" value="${st.price !== '' ? num(st.price) : ''}" placeholder="0,00"></div><span class="hint" data-pbs></span></div><div data-margin></div></div>
         <div class="section-title mt">Receta (ingredientes por 1 unidad)</div><div data-recipe></div>`;
       bindPrice();
       recipeEditor($('[data-recipe]'), st.recipe, renderMargin);
@@ -267,7 +267,7 @@ export function productForm(p = null) {
         card.className = 'variant-card';
         card.innerHTML = `<div class="row row-wrap">
             <input class="input" style="flex:1.2;min-width:140px" data-vn value="${esc(v.name)}" placeholder="Nombre del tamaño">
-            <div class="input-group" style="flex:1;min-width:120px"><span class="prefix">$</span><input class="input" data-vp inputmode="decimal" value="${v.price !== '' ? num(v.price) : ''}" placeholder="Precio"></div>
+            <div class="input-group" style="flex:1;min-width:120px"><span class="prefix">${esc(loc().sym)}</span><input class="input" data-vp inputmode="decimal" value="${v.price !== '' ? num(v.price) : ''}" placeholder="Precio"></div>
             <span class="small muted" data-vm></span>
             <button type="button" class="btn btn-ghost btn-sm" data-vcopy title="Duplicar este tamaño">${icon('copy')}</button>
             <button type="button" class="btn btn-ghost btn-icon btn-sm" data-vdel title="Quitar tamaño">${icon('trash')}</button>
@@ -275,7 +275,7 @@ export function productForm(p = null) {
         vl.appendChild(card);
         const vm = () => {
           const cost = store.recipeCost(v.recipe); const pr = Number(v.price) || 0;
-          card.querySelector('[data-vm]').innerHTML = `Costo ${usd(cost)} · Margen <b>${pr > 0 ? num((pr - cost) / pr * 100, 0) : 0}%</b> · ${bs(pr * store.rate)}`;
+          card.querySelector('[data-vm]').innerHTML = `Costo ${usd(cost)} · Margen <b>${pr > 0 ? num((pr - cost) / pr * 100, 0) : 0}%</b>${isVE() ? ' · ' + bs(pr * store.rate) : ''}`;
         };
         card.querySelector('[data-vn]').oninput = (e) => { v.name = e.target.value; };
         card.querySelector('[data-vp]').oninput = (e) => { v.price = parseNum(e.target.value); vm(); };
@@ -315,7 +315,7 @@ export function productForm(p = null) {
       const ing = store.ingredient(r.ingredientId);
       return `<div class="row row-wrap" style="background:var(--surface);padding:8px;border-radius:12px;border:1px solid var(--border)">
         <input class="input input-sm" style="flex:1.3;min-width:130px" data-xn="${i}" value="${esc(x.name)}" placeholder="Ej.: Extra queso">
-        <div class="input-group" style="width:100px"><span class="prefix">$</span><input class="input input-sm" data-xp="${i}" inputmode="decimal" value="${x.price !== '' && x.price != null ? num(x.price) : ''}" placeholder="0,00"></div>
+        <div class="input-group" style="width:100px"><span class="prefix">${esc(loc().sym)}</span><input class="input input-sm" data-xp="${i}" inputmode="decimal" value="${x.price !== '' && x.price != null ? num(x.price) : ''}" placeholder="0,00"></div>
         <select class="select input-sm" style="flex:1.4;min-width:150px" data-xi="${i}">${ingredientOptions(r.ingredientId).replace('Elige un ingrediente…', 'Sin descontar insumo')}</select>
         <input class="input input-sm" style="width:70px" data-xq="${i}" inputmode="decimal" value="${String(r.qty || 1).replace('.', ',')}" title="Cantidad"><span class="small muted">${ing ? unitShort(ing.unit) : ''}</span>
         <button type="button" class="btn btn-ghost btn-icon btn-sm" data-xdel="${i}">${icon('x')}</button>

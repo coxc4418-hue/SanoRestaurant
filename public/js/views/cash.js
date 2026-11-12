@@ -2,7 +2,7 @@
 import { store } from '../store.js';
 import { openShift, closeShift, cashMovement, shiftExpected } from '../ops.js';
 import { requirePin } from '../auth.js';
-import { esc, usd, bs, num, toast, openModal, emptyState, parseNum, setBusy, fmtDateTime, fmtTime, PAY_METHODS, methodLabel } from '../utils.js';
+import { esc, usd, bs, num, toast, openModal, emptyState, parseNum, setBusy, fmtDateTime, fmtTime, PAY_METHODS, methodLabel, loc, isVE } from '../utils.js';
 import { icon } from '../icons.js';
 import { printDoc } from '../shared.js';
 
@@ -33,8 +33,8 @@ export function mount(el) {
           <p class="muted" style="margin:0">Indica el efectivo con el que empiezas el turno (fondo para dar vuelto).</p>
         </div>
         <form class="stack" id="k-open">
-          <div class="form-grid"><div class="field"><label>Efectivo en dólares</label><div class="input-group"><span class="prefix">$</span><input class="input input-lg" name="usd" inputmode="decimal" placeholder="0,00" autofocus></div></div>
-          <div class="field"><label>Efectivo en bolívares</label><div class="input-group"><span class="prefix">Bs</span><input class="input input-lg" style="padding-left:36px" name="bs" inputmode="decimal" placeholder="0,00"></div></div></div>
+          <div class="form-grid"><div class="field"><label>Efectivo${isVE() ? ' en dólares' : ''}</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input input-lg" name="usd" inputmode="decimal" placeholder="0,00" autofocus></div></div>
+          <div class="field bs-only"><label>Efectivo en bolívares</label><div class="input-group"><span class="prefix">Bs</span><input class="input input-lg" style="padding-left:36px" name="bs" inputmode="decimal" placeholder="0,00"></div></div></div>
           <div class="field"><label>Nota (opcional)</label><input class="input" name="note" placeholder="Ej.: turno mañana"></div>
           <button class="btn btn-primary btn-lg btn-block">${icon('unlock')} Abrir caja</button>
         </form></div>`;
@@ -53,15 +53,15 @@ export function mount(el) {
     $('#k-actions').innerHTML = `<button class="btn btn-secondary" id="k-hist">${icon('clock')} Cierres</button><button class="btn btn-secondary" id="k-out">${icon('arrowUp')} Gasto</button><button class="btn btn-secondary" id="k-in">${icon('arrowDown')} Ingreso</button><button class="btn btn-primary" id="k-close">${icon('lock')} Cerrar caja</button>`;
     $('#k-body').innerHTML = `
       <div class="kpis">
-        <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Ventas del turno</span><span class="kpi-icon tone-success">${icon('trend')}</span></div><div class="kpi-value">${usd(sh.salesTotal || 0)}</div><div class="kpi-sub">${sh.salesCount || 0} venta(s) · ${bs((sh.salesTotal || 0) * store.rate)}</div></div>
-        <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Efectivo $ esperado</span><span class="kpi-icon tone-brand">${icon('dollar')}</span></div><div class="kpi-value">${usd(exp.usd)}</div><div class="kpi-sub">fondo ${usd(sh.openingUSD)} + entradas − salidas</div></div>
-        <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Efectivo Bs esperado</span><span class="kpi-icon tone-info">${icon('cash')}</span></div><div class="kpi-value" style="font-size:22px">${bs(exp.bs)}</div><div class="kpi-sub">fondo ${bs(sh.openingBs)}</div></div>
+        <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Ventas del turno</span><span class="kpi-icon tone-success">${icon('trend')}</span></div><div class="kpi-value">${usd(sh.salesTotal || 0)}</div><div class="kpi-sub">${sh.salesCount || 0} venta(s)${isVE() ? ' · ' + bs((sh.salesTotal || 0) * store.rate) : ''}</div></div>
+        <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Efectivo ${isVE() ? '$ ' : ''}esperado</span><span class="kpi-icon tone-brand">${icon('dollar')}</span></div><div class="kpi-value">${usd(exp.usd)}</div><div class="kpi-sub">fondo ${usd(sh.openingUSD)} + entradas − salidas</div></div>
+        <div class="card kpi bs-only"><div class="kpi-top"><span class="kpi-label">Efectivo Bs esperado</span><span class="kpi-icon tone-info">${icon('cash')}</span></div><div class="kpi-value" style="font-size:22px">${bs(exp.bs)}</div><div class="kpi-sub">fondo ${bs(sh.openingBs)}</div></div>
         <div class="card kpi"><div class="kpi-top"><span class="kpi-label">Gastos del turno</span><span class="kpi-icon tone-danger">${icon('arrowUp')}</span></div><div class="kpi-value">${usd(sh.expensesUSD || 0)}</div><div class="kpi-sub">${sh.tipsTotal ? `Propinas ${usd(sh.tipsTotal)}` : 'pagados desde la caja'}</div></div>
       </div>
       <div class="grid-2">
         <div class="card"><div class="card-head"><div class="card-title">${icon('card')} Ventas por forma de pago</div></div>
           ${Object.keys(PAY_METHODS).filter((k) => Math.abs(byM[k] || 0) > 0.004).length ? Object.entries(PAY_METHODS).filter(([k]) => Math.abs(byM[k] || 0) > 0.004).map(([k, p]) => `<div class="hbar"><span class="row"><i style="width:10px;height:10px;border-radius:50%;background:${p.color}"></i>${p.label}</span><div class="track"><i style="width:${Math.max(0, Math.min(100, byM[k] / Math.max(0.01, ...Object.values(byM)) * 100))}%;background:${p.color}"></i></div><b class="num">${usd(byM[k])}</b></div>`).join('') : emptyState('card', 'Aún no hay ventas en este turno')}
-          <div class="small muted mt">En dólares equivalentes, ya descontado el vuelto (un monto negativo es vuelto entregado en esa moneda).</div></div>
+          <div class="small muted mt">En ${isVE() ? 'dólares equivalentes' : esc(loc().curName)}, ya descontado el vuelto (un monto negativo es vuelto entregado en esa moneda).</div></div>
         <div class="card card-flush"><div class="card-head" style="padding:16px 18px 0"><div class="card-title">${icon('list')} Movimientos manuales</div></div>
           <div id="k-moves">${moves.length ? `<div class="table-wrap"><table class="table"><tbody>${moves.map((mv) => `<tr><td class="small nowrap">${fmtTime(mv.date)}</td><td><b>${esc(mv.concept || mv.category)}</b><div class="t-sub">${esc(mv.category || '')}${mv.note ? ' · ' + esc(mv.note) : ''}</div></td><td class="r num ${mv.direction === 'out' ? 'text-danger' : 'text-success'}">${mv.type === 'void' ? 'Anulación' : (mv.direction === 'out' ? '−' : '+') + (mv.currency === 'BS' ? bs(mv.amount) : usd(mv.amount))}</td></tr>`).join('')}</tbody></table></div>` : `<div style="padding:10px">${emptyState('wallet', 'Sin movimientos', 'Registra gastos (gas, compras, pagos) o ingresos extra.')}</div>`}</div></div>
       </div>`;
@@ -109,8 +109,8 @@ export function mount(el) {
       body: `<form class="stack" data-f>
         ${open ? `<div class="pay-status due"><span>${icon('alert')} Hay ${open} pedido(s) abiertos sin cobrar</span><span></span></div>` : ''}
         <div class="form-grid">
-          <div class="field"><label>Efectivo $ contado</label><div class="input-group"><span class="prefix">$</span><input class="input input-lg" name="usd" inputmode="decimal" placeholder="${num(exp.usd)}" autofocus></div><span class="hint">Esperado: ${usd(exp.usd)}</span></div>
-          <div class="field"><label>Efectivo Bs contado</label><div class="input-group"><span class="prefix">Bs</span><input class="input input-lg" style="padding-left:36px" name="bs" inputmode="decimal" placeholder="${num(exp.bs)}"></div><span class="hint">Esperado: ${bs(exp.bs)}</span></div>
+          <div class="field"><label>Efectivo ${isVE() ? '$ ' : ''}contado</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input input-lg" name="usd" inputmode="decimal" placeholder="${num(exp.usd)}" autofocus></div><span class="hint">Esperado: ${usd(exp.usd)}</span></div>
+          <div class="field bs-only"><label>Efectivo Bs contado</label><div class="input-group"><span class="prefix">Bs</span><input class="input input-lg" style="padding-left:36px" name="bs" inputmode="decimal" placeholder="${num(exp.bs)}"></div><span class="hint">Esperado: ${bs(exp.bs)}</span></div>
         </div>
         <div class="summary-box" data-diff></div>
         <div class="field"><label>Observación</label><input class="input" name="note" placeholder="Opcional"></div>
@@ -121,7 +121,7 @@ export function mount(el) {
     const diff = () => {
       const du = (F.usd.value ? parseNum(F.usd.value) : exp.usd) - exp.usd; const db = (F.bs.value ? parseNum(F.bs.value) : exp.bs) - exp.bs;
       const fmt = (v, f) => `<b class="${Math.abs(v) < 0.01 ? 'text-success' : v < 0 ? 'text-danger' : 'text-warning'}">${v > 0 ? '+' : ''}${f(v)}</b>`;
-      m.el.querySelector('[data-diff]').innerHTML = `<div class="summary-row"><span>Diferencia en $</span>${fmt(du, usd)}</div><div class="summary-row"><span>Diferencia en Bs</span>${fmt(db, bs)}</div>`;
+      m.el.querySelector('[data-diff]').innerHTML = `<div class="summary-row"><span>Diferencia${isVE() ? ' en $' : ''}</span>${fmt(du, usd)}</div><div class="summary-row bs-only"><span>Diferencia en Bs</span>${fmt(db, bs)}</div>`;
     };
     F.usd.oninput = diff; F.bs.oninput = diff; diff();
     m.el.querySelector('[data-ok]').onclick = async (e) => {
@@ -136,16 +136,16 @@ export function mount(el) {
 
   function printClose(sh, ask = false) {
     const go = () => printDoc(`Cierre de caja ${sh.number}`, `
-      <div class="kpis"><div class="kpi">Apertura<b>${fmtDateTime(sh.openedAt)}</b></div><div class="kpi">Cierre<b>${fmtDateTime(sh.closedAt)}</b></div><div class="kpi">Ventas<b>$${num(sh.salesTotal || 0)}</b>${sh.salesCount || 0} ventas</div></div>
+      <div class="kpis"><div class="kpi">Apertura<b>${fmtDateTime(sh.openedAt)}</b></div><div class="kpi">Cierre<b>${fmtDateTime(sh.closedAt)}</b></div><div class="kpi">Ventas<b>${usd(sh.salesTotal || 0)}</b>${sh.salesCount || 0} ventas</div></div>
       <h2>Efectivo</h2><table><thead><tr><th></th><th class="r">Dólares</th><th class="r">Bolívares</th></tr></thead><tbody>
-      <tr><td>Fondo inicial</td><td class="r">$${num(sh.openingUSD)}</td><td class="r">Bs ${num(sh.openingBs)}</td></tr>
-      <tr><td>Entradas</td><td class="r">$${num(sh.inUSD)}</td><td class="r">Bs ${num(sh.inBs)}</td></tr>
-      <tr><td>Salidas (vueltos y gastos)</td><td class="r">$${num(sh.outUSD)}</td><td class="r">Bs ${num(sh.outBs)}</td></tr>
-      <tr><td><b>Esperado</b></td><td class="r"><b>$${num(sh.expectedUSD)}</b></td><td class="r"><b>Bs ${num(sh.expectedBs)}</b></td></tr>
-      <tr><td><b>Contado</b></td><td class="r"><b>$${num(sh.countedUSD)}</b></td><td class="r"><b>Bs ${num(sh.countedBs)}</b></td></tr>
-      <tr><td><b>Diferencia</b></td><td class="r">$${num(sh.diffUSD)}</td><td class="r">Bs ${num(sh.diffBs)}</td></tr></tbody></table>
-      <h2>Ventas por forma de pago (en $)</h2><table><tbody>${Object.entries(sh.byMethod || {}).filter(([, v]) => v).map(([k, v]) => `<tr><td>${esc(methodLabel(k))}</td><td class="r">$${num(v)}</td></tr>`).join('') || '<tr><td>Sin ventas</td><td></td></tr>'}</tbody></table>
-      ${sh.expensesUSD ? `<p>Gastos del turno: $${num(sh.expensesUSD)}</p>` : ''}${sh.tipsTotal ? `<p>Propinas: $${num(sh.tipsTotal)}</p>` : ''}${sh.closeNote ? `<p>Observación: ${esc(sh.closeNote)}</p>` : ''}`);
+      <tr><td>Fondo inicial</td><td class="r">${usd(sh.openingUSD)}</td>${isVE() ? `<td class="r">${bs(sh.openingBs)}</td>` : ''}</tr>
+      <tr><td>Entradas</td><td class="r">${usd(sh.inUSD)}</td>${isVE() ? `<td class="r">${bs(sh.inBs)}</td>` : ''}</tr>
+      <tr><td>Salidas (vueltos y gastos)</td><td class="r">${usd(sh.outUSD)}</td>${isVE() ? `<td class="r">${bs(sh.outBs)}</td>` : ''}</tr>
+      <tr><td><b>Esperado</b></td><td class="r"><b>${usd(sh.expectedUSD)}</b></td>${isVE() ? `<td class="r"><b>${bs(sh.expectedBs)}</b></td>` : ''}</tr>
+      <tr><td><b>Contado</b></td><td class="r"><b>${usd(sh.countedUSD)}</b></td>${isVE() ? `<td class="r"><b>${bs(sh.countedBs)}</b></td>` : ''}</tr>
+      <tr><td><b>Diferencia</b></td><td class="r">${usd(sh.diffUSD)}</td>${isVE() ? `<td class="r">${bs(sh.diffBs)}</td>` : ''}</tr></tbody></table>
+      <h2>Ventas por forma de pago (en $)</h2><table><tbody>${Object.entries(sh.byMethod || {}).filter(([, v]) => v).map(([k, v]) => `<tr><td>${esc(methodLabel(k))}</td><td class="r">${usd(v)}</td></tr>`).join('') || '<tr><td>Sin ventas</td><td></td></tr>'}</tbody></table>
+      ${sh.expensesUSD ? `<p>Gastos del turno: ${usd(sh.expensesUSD)}</p>` : ''}${sh.tipsTotal ? `<p>Propinas: ${usd(sh.tipsTotal)}</p>` : ''}${sh.closeNote ? `<p>Observación: ${esc(sh.closeNote)}</p>` : ''}`);
     if (!ask) { go(); return; }
     const m = openModal({ title: 'Caja cerrada', size: 'sm', body: `<p class="muted">¿Deseas imprimir el reporte de cierre?</p>`, footer: `<button class="btn btn-secondary" data-close>No</button><button class="btn btn-primary" data-p>${icon('print')} Imprimir</button>` });
     m.el.querySelector('[data-p]').onclick = () => { go(); m.close(); };

@@ -55,7 +55,7 @@ export function mount(el, { navigate }) {
     const alerts = [];
     if (!store.openShift) alerts.push({ tone: 'warning', icon: 'wallet', text: 'La caja está cerrada. Ábrela para empezar a cobrar.', btn: 'Abrir caja', go: () => navigate('caja') });
     const rateDay = store.settings.rateUpdatedAt ? dayKey(new Date(store.settings.rateUpdatedAt)) : '';
-    if (!(store.rate > 0) || rateDay !== today) alerts.push({ tone: 'info', icon: 'refresh', text: store.rate > 0 ? `La tasa (Bs ${num(store.rate)}) no se ha actualizado hoy.` : 'Configura la tasa del día.', btn: 'Actualizar tasa', go: openRateModal });
+    if (!(store.rate > 0) || rateDay !== today) alerts.push({ tone: 'info', icon: 'refresh', text: store.rate > 0 ? `La tasa${bs(store.rate) ? ` (${bs(store.rate)})` : ''} no se ha actualizado hoy.` : 'Configura la tasa del día.', btn: 'Actualizar tasa', go: openRateModal });
     const pend = store.tickets.filter((t) => t.status === 'pendiente').length;
     if (pend) alerts.push({ tone: 'brand', icon: 'chef', text: `${pend} comanda(s) esperando en cocina.`, btn: 'Ver cocina', go: () => navigate('cocina') });
     if (!store.products.length) alerts.push({ tone: 'brand', icon: 'burger', text: 'Crea tu menú con sus recetas para empezar a vender.', btn: 'Crear menú', go: () => navigate('menu') });
@@ -67,7 +67,7 @@ export function mount(el, { navigate }) {
     $('#d-root').innerHTML = `
       <div class="view-header">
         <div><h1 class="view-title">${hi} 👋</h1><p class="view-sub">${fmtLongDate()} · ${esc(store.businessName)}</p></div>
-        <div class="view-actions"><button class="btn btn-secondary" id="d-help">${icon('info')} Ayuda</button><button class="btn btn-secondary" id="d-rate">${icon('refresh')} Tasa: Bs ${num(store.rate)}</button><button class="btn btn-primary" id="d-sell">${icon('cart')} Vender</button></div>
+        <div class="view-actions"><button class="btn btn-secondary" id="d-help">${icon('info')} Ayuda</button><button class="btn btn-secondary" id="d-rate">${icon('refresh')} Tasa: ${bs(store.rate)}</button><button class="btn btn-primary" id="d-sell">${icon('cart')} Vender</button></div>
       </div>
       <div class="quick">
         <button data-go="vender" data-p="llevar"><span class="kpi-icon tone-brand">${icon('bag')}</span><span>Para llevar<small>Venta rápida</small></span></button>

@@ -169,10 +169,10 @@ export function mount(el) {
     if (!data) return;
     const d = data;
     printDoc(`Reporte ${$('#r-sub').textContent}`, `
-      <div class="kpis"><div class="kpi">Ventas<b>$${num(d.total)}</b>Bs ${num(d.totalBs)}</div><div class="kpi">Pedidos<b>${d.count}</b>Prom. $${num(d.avg)}</div><div class="kpi">Costo insumos<b>$${num(d.cost)}</b></div><div class="kpi">Ganancia bruta<b>$${num(d.profit)}</b>${num(d.margin, 0)}%</div><div class="kpi">Gastos<b>$${num(d.expensesUSD)}</b></div></div>
-      <h2>Formas de pago</h2><table><tbody>${Object.entries(d.byMethod).map(([k, v]) => `<tr><td>${esc(methodLabel(k))}</td><td class="r">$${num(v.usd)}</td><td class="r">${v.cur === 'BS' ? 'Bs ' + num(v.orig) : ''}</td></tr>`).join('')}</tbody></table>
-      <h2>Productos</h2><table><thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Ingresos</th><th class="r">Ganancia</th></tr></thead><tbody>${d.products.map((p) => `<tr><td>${esc(p.name)}</td><td class="r">${num(p.qty, 0)}</td><td class="r">$${num(p.revenue)}</td><td class="r">$${num(p.revenue - p.cost)}</td></tr>`).join('')}</tbody></table>
-      <h2>Insumos consumidos</h2><table><tbody>${d.ingredients.map((g) => `<tr><td>${esc(g.name)}</td><td class="r">${qtyFmt(round4(g.qty))} ${unitShort(g.unit)}</td><td class="r">$${num(g.cost)}</td></tr>`).join('')}</tbody></table>`);
+      <div class="kpis"><div class="kpi">Ventas<b>${usd(d.total)}</b>${bs(d.totalBs)}</div><div class="kpi">Pedidos<b>${d.count}</b>Prom. ${usd(d.avg)}</div><div class="kpi">Costo insumos<b>${usd(d.cost)}</b></div><div class="kpi">Ganancia bruta<b>${usd(d.profit)}</b>${num(d.margin, 0)}%</div><div class="kpi">Gastos<b>${usd(d.expensesUSD)}</b></div></div>
+      <h2>Formas de pago</h2><table><tbody>${Object.entries(d.byMethod).map(([k, v]) => `<tr><td>${esc(methodLabel(k))}</td><td class="r">${usd(v.usd)}</td><td class="r">${v.cur === 'BS' ? bs(v.orig) : ''}</td></tr>`).join('')}</tbody></table>
+      <h2>Productos</h2><table><thead><tr><th>Producto</th><th class="r">Cant.</th><th class="r">Ingresos</th><th class="r">Ganancia</th></tr></thead><tbody>${d.products.map((p) => `<tr><td>${esc(p.name)}</td><td class="r">${num(p.qty, 0)}</td><td class="r">${usd(p.revenue)}</td><td class="r">${usd(p.revenue - p.cost)}</td></tr>`).join('')}</tbody></table>
+      <h2>Insumos consumidos</h2><table><tbody>${d.ingredients.map((g) => `<tr><td>${esc(g.name)}</td><td class="r">${qtyFmt(round4(g.qty))} ${unitShort(g.unit)}</td><td class="r">${usd(g.cost)}</td></tr>`).join('')}</tbody></table>`);
   }
 
   el.querySelectorAll('[data-pr]').forEach((b) => b.onclick = () => { preset = b.dataset.pr; render(); if (preset !== 'custom') load(); else load(); });

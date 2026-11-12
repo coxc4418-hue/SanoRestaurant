@@ -9,7 +9,7 @@ import { round2, nowISO, todayKey, dayKey, addDays, docNumber, shortId, sha256 }
 export const DEMO_PIN = '1234';
 
 export const DEMO_MINUTES = 30;
-const DATA_COLLECTIONS = ['ingredients', 'products', 'tables', 'orders', 'tickets', 'customers', 'cash_shifts', 'cash_movements', 'sales', 'inventory_logs', 'config'];
+export const DATA_COLLECTIONS = ['ingredients', 'products', 'tables', 'orders', 'tickets', 'customers', 'cash_shifts', 'cash_movements', 'sales', 'inventory_logs', 'config'];
 
 export async function startDemo() { await signInAnonymously(auth); }
 

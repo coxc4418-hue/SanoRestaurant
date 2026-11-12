@@ -2,7 +2,7 @@
 import { auth, onAuthStateChanged } from './firebase.js';
 import { store, getTenant } from './store.js';
 import { session, login, logout, authErrorMessage, SUPER_EMAIL, usernameOf } from './auth.js';
-import { esc, toast, num, closeAllModals, $, $$, setBusy, confirmDialog, toggleTheme, openModal, fmtDate } from './utils.js';
+import { esc, toast, num, closeAllModals, $, $$, setBusy, confirmDialog, toggleTheme, openModal, fmtDate, isVE, loc, flagImg, bs } from './utils.js';
 import { icon } from './icons.js';
 import { openRateModal, autoUpdateRate, salesWa, SALES_PHONE_FMT } from './shared.js';
 import { isStandalone, platform, bindInstallButtons } from './install.js';
@@ -216,6 +216,8 @@ async function enterTenant(tenantId) {
 }
 
 async function afterEnter() {
+  if (!store.settings.country && !session.isSuper && !store.isDemo) { const { openCountryPicker } = await import('./country.js'); await openCountryPicker({ force: true }); }
+  if (!isVE()) return;
   await autoUpdateRate();
   if (!(store.rate > 0)) setTimeout(() => { if (!(store.rate > 0)) openRateModal(); }, 500);
 }
@@ -241,6 +243,7 @@ async function enterDemo(user) {
   navigate('inicio', { replace: true });
   hideBoot();
   startDemoTimer();
+  if (!store.settings.country) { const { openCountryPicker } = await import('./country.js'); await openCountryPicker({ force: true }); navigate('inicio', { replace: true, force: true }); }
   if (!t) setTimeout(() => import('./tour.js').then((m) => m.startTour('general')), 900);
 }
 
@@ -318,6 +321,17 @@ function planWarning() {
   return `<div class="banner offline-banner"><span>${icon('clock')} Tu plan vence ${days <= 0 ? 'hoy' : `en ${days} día(s)`} (${fmtDate(paidUntilISO(t))}).</span><a class="btn btn-sm btn-whatsapp" href="${salesWa('Hola, quiero renovar mi plan de SANO Restaurant.')}" target="_blank" rel="noopener">${icon('whatsapp')} Renovar</a></div>`;
 }
 
+// Botón de tasa / país: en Venezuela muestra la tasa BCV; en otro país, la bandera y la moneda
+const rateText = () => (isVE() ? `${bs(store.rate)}` : `${flagImg(loc().code)} ${esc(loc().cur)}`);
+const ratePill = () => `<span>${isVE() ? 'Tasa BCV' : esc(loc().name)}</span><b id="sb-rate-val">${rateText()}</b>`;
+async function rateClick() {
+  if (isVE()) { openRateModal(); return; }
+  const { requirePin } = await import('./auth.js');
+  if (!(await requirePin('Cambiar el país y la moneda'))) return;
+  const { openCountryPicker } = await import('./country.js');
+  if (await openCountryPicker()) location.reload();
+}
+
 function renderShell() {
   teardownApp();
   const tName = store.tenant?.name || store.businessName;
@@ -329,7 +343,7 @@ function renderShell() {
         <button class="sb-search" id="sb-search">${icon('search')}<span>Buscar plato, cliente, mesa…</span><kbd>Ctrl K</kbd></button>
         <nav class="sb-nav">${navItems()}</nav>
         <div class="sb-foot">
-          <button class="rate-pill" id="sb-rate" title="Cambiar tasa del día"><span>Tasa del día</span><b id="sb-rate-val">Bs ${num(store.rate)}</b></button>
+          <button class="rate-pill" id="sb-rate" title="País, moneda y tasa">${ratePill()}</button>
           <div class="between">
             <div class="sb-status"><span class="dot" id="sb-dot"></span><span id="sb-net">En línea</span></div>
             <div class="row">
@@ -353,7 +367,7 @@ function renderShell() {
           <div class="grow" style="min-width:0"><div class="tb-title ellipsis" id="tb-title">SANO Restaurant</div><div class="tb-sub ellipsis">${esc(tName)}</div></div>
           ${isStandalone() ? '' : `<button class="btn btn-ghost btn-icon" data-install aria-label="Instalar app" title="Instalar app">${icon('install')}</button>`}
           <button class="btn btn-ghost btn-icon btn-sm" id="tb-search" aria-label="Buscar" title="Buscar (Ctrl + K)">${icon('search')}</button>
-          <button class="rate-mini" id="tb-rate">Bs ${num(store.rate)}</button>
+          <button class="rate-mini" id="tb-rate">${rateText()}</button>
         </header>
         <main class="content" id="view"></main>
       </div>
@@ -373,8 +387,8 @@ function renderShell() {
   $('#sb-help').onclick = () => { closeSidebar(); import('./tour.js').then((t) => t.openHelp()); };
   $('#bn-more').onclick = openSidebar;
   $('#sb-backdrop').onclick = closeSidebar;
-  $('#sb-rate').onclick = openRateModal;
-  $('#tb-rate').onclick = openRateModal;
+  $('#sb-rate').onclick = rateClick;
+  $('#tb-rate').onclick = rateClick;
   $('#sb-logout').onclick = async () => {
     if (store.isDemo) { if (await confirmDialog({ title: 'Terminar demo', message: 'Se cerrará la sesión y se borrarán los datos de esta demo.', confirmText: 'Terminar', danger: true })) endDemo(false); return; }
     if (await confirmDialog({ title: 'Cerrar sesión', message: '¿Deseas salir de SANO Restaurant en este dispositivo?', confirmText: 'Salir' })) logout();
@@ -388,8 +402,8 @@ function renderShell() {
 
   storeUnsub = store.on('*', (evt) => {
     if (evt === 'settings' || evt === 'rate') {
-      $('#sb-rate-val') && ($('#sb-rate-val').textContent = `Bs ${num(store.rate)}`);
-      $('#tb-rate') && ($('#tb-rate').textContent = `Bs ${num(store.rate)}`);
+      $('#sb-rate') && ($('#sb-rate').innerHTML = ratePill());
+      $('#tb-rate') && ($('#tb-rate').innerHTML = rateText());
     }
     if (evt === 'tenant') {
       $('#sb-tenant-name') && ($('#sb-tenant-name').textContent = store.tenant?.name || store.businessName);

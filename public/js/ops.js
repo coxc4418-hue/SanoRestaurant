@@ -1,7 +1,7 @@
 // SANO Restaurant — Operaciones de negocio (atómicas, funcionan sin conexión)
 import { store, convertQty, unitShort, ORDER_TYPES } from './store.js';
 import { session } from './auth.js';
-import { round2, round4, nowISO, todayKey, dayKey, docNumber, PAY_METHODS, shortId, qtyFmt } from './utils.js';
+import { round2, round4, nowISO, todayKey, dayKey, docNumber, PAY_METHODS, shortId, qtyFmt, isVE, usd } from './utils.js';
 
 const by = () => (session.user?.isAnonymous ? 'demo' : session.user?.email || '');
 const FLOW0 = () => ({ inUSD: 0, inBs: 0, outUSD: 0, outBs: 0 });
@@ -198,6 +198,7 @@ function shiftIncrements(flow, extra = {}) {
  * payments: [{method, amount}] (amount en la moneda del método)
  */
 export async function chargeSale({ order = null, type = 'llevar', tableId = null, lines, customer = null, discount = 0, deliveryFee = 0, tip = 0, payments = [], changeCurrency = 'BS', note = '', waiter = '', people = 0, address = '' }) {
+  if (!isVE()) changeCurrency = 'USD';
   const rate = store.rate;
   if (!(rate > 0)) throw new Error('Configura la tasa del día antes de cobrar.');
   const shift = store.openShift;
@@ -219,7 +220,7 @@ export async function chargeSale({ order = null, type = 'llevar', tableId = null
     return { method: p.method, currency: cur, amount: round2(p.amount), usd: round4(cur === 'BS' ? p.amount / rate : p.amount) };
   });
   const paidUSD = round4(pays.reduce((a, p) => a + p.usd, 0));
-  if (paidUSD < t.total - 0.01) throw new Error(`Falta por cobrar $${round2(t.total - paidUSD).toFixed(2)}.`);
+  if (paidUSD < t.total - 0.01) throw new Error(`Falta por cobrar ${usd(t.total - paidUSD)}.`);
   const changeUSD = round2(Math.max(0, paidUSD - t.total));
   const flow = cashFlowOf(pays, changeUSD, changeCurrency, rate);
 

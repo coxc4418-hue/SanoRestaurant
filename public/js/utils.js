@@ -17,8 +17,42 @@ export function num(n, d = 2) {
   nfCache[k] ||= new Intl.NumberFormat('es-VE', { minimumFractionDigits: d, maximumFractionDigits: d });
   return nfCache[k].format(Math.abs(v) < 0.005 && d === 2 ? 0 : v);
 }
-export const usd = (n) => `$ ${num(n)}`;
-export const bs = (n) => `Bs ${num(n)}`;
+// ---------- País y moneda de trabajo ----------
+// Venezuela (o país aún sin elegir): precios en dólares con su equivalente en bolívares a la tasa BCV.
+// Otros países: su moneda local, sin bolívares.
+/** Países de Latinoamérica: moneda, prefijo telefónico, formas de pago y nombres de documentos */
+export const COUNTRIES = {
+  AR: { name: 'Argentina', flag: '🇦🇷', cur: 'ARS', curName: 'Peso argentino', sym: '$', dec: 2, dial: '54', tax: 'CUIT', id: 'DNI', lic: 'Matrícula', extra: ['mercadopago'] },
+  BO: { name: 'Bolivia', flag: '🇧🇴', cur: 'BOB', curName: 'Boliviano', sym: 'Bs', dec: 2, dial: '591', tax: 'NIT', id: 'C.I.', lic: 'Matrícula profesional', extra: ['qr', 'tigo'] },
+  BR: { name: 'Brasil', flag: '🇧🇷', cur: 'BRL', curName: 'Real brasileño', sym: 'R$', dec: 2, dial: '55', tax: 'CNPJ', id: 'CPF', lic: 'CRO', extra: ['pix'] },
+  CL: { name: 'Chile', flag: '🇨🇱', cur: 'CLP', curName: 'Peso chileno', sym: '$', dec: 0, dial: '56', tax: 'RUT', id: 'RUT', lic: 'Registro SIS', extra: ['webpay'] },
+  CO: { name: 'Colombia', flag: '🇨🇴', cur: 'COP', curName: 'Peso colombiano', sym: '$', dec: 0, dial: '57', tax: 'NIT', id: 'C.C.', lic: 'Tarjeta profesional', extra: ['nequi', 'daviplata'] },
+  CR: { name: 'Costa Rica', flag: '🇨🇷', cur: 'CRC', curName: 'Colón costarricense', sym: '₡', dec: 0, dial: '506', tax: 'Cédula jurídica', id: 'Cédula', lic: 'Código del Colegio', extra: ['sinpe'] },
+  CU: { name: 'Cuba', flag: '🇨🇺', cur: 'CUP', curName: 'Peso cubano', sym: '$', dec: 2, dial: '53', tax: 'NIT', id: 'C.I.', lic: 'Registro profesional', extra: [] },
+  EC: { name: 'Ecuador', flag: '🇪🇨', cur: 'USD', curName: 'Dólar estadounidense', sym: '$', dec: 2, dial: '593', tax: 'RUC', id: 'C.I.', lic: 'Registro SENESCYT', extra: ['deuna'] },
+  SV: { name: 'El Salvador', flag: '🇸🇻', cur: 'USD', curName: 'Dólar estadounidense', sym: '$', dec: 2, dial: '503', tax: 'NIT', id: 'DUI', lic: 'JVPO', extra: [] },
+  GT: { name: 'Guatemala', flag: '🇬🇹', cur: 'GTQ', curName: 'Quetzal', sym: 'Q', dec: 2, dial: '502', tax: 'NIT', id: 'DPI', lic: 'Colegiado', extra: [] },
+  HN: { name: 'Honduras', flag: '🇭🇳', cur: 'HNL', curName: 'Lempira', sym: 'L', dec: 2, dial: '504', tax: 'RTN', id: 'DNI', lic: 'Colegiación', extra: ['tigo'] },
+  MX: { name: 'México', flag: '🇲🇽', cur: 'MXN', curName: 'Peso mexicano', sym: '$', dec: 2, dial: '52', tax: 'RFC', id: 'CURP', lic: 'Cédula profesional', extra: ['spei', 'mercadopago'] },
+  NI: { name: 'Nicaragua', flag: '🇳🇮', cur: 'NIO', curName: 'Córdoba', sym: 'C$', dec: 2, dial: '505', tax: 'RUC', id: 'Cédula', lic: 'Registro MINSA', extra: [] },
+  PA: { name: 'Panamá', flag: '🇵🇦', cur: 'USD', curName: 'Dólar estadounidense (balboa)', sym: '$', dec: 2, dial: '507', tax: 'RUC', id: 'Cédula', lic: 'Registro de idoneidad', extra: ['yappy'] },
+  PY: { name: 'Paraguay', flag: '🇵🇾', cur: 'PYG', curName: 'Guaraní', sym: '₲', dec: 0, dial: '595', tax: 'RUC', id: 'C.I.', lic: 'Registro profesional', extra: ['qr'] },
+  PE: { name: 'Perú', flag: '🇵🇪', cur: 'PEN', curName: 'Sol peruano', sym: 'S/', dec: 2, dial: '51', tax: 'RUC', id: 'DNI', lic: 'COP', extra: ['yape', 'plin'] },
+  PR: { name: 'Puerto Rico', flag: '🇵🇷', cur: 'USD', curName: 'Dólar estadounidense', sym: '$', dec: 2, dial: '1', tax: 'EIN', id: 'ID', lic: 'Licencia', extra: [] },
+  DO: { name: 'República Dominicana', flag: '🇩🇴', cur: 'DOP', curName: 'Peso dominicano', sym: 'RD$', dec: 2, dial: '1', tax: 'RNC', id: 'Cédula', lic: 'Exequátur', extra: [] },
+  UY: { name: 'Uruguay', flag: '🇺🇾', cur: 'UYU', curName: 'Peso uruguayo', sym: '$', dec: 2, dial: '598', tax: 'RUT', id: 'C.I.', lic: 'Registro MSP', extra: ['mercadopago'] },
+  VE: { name: 'Venezuela', flag: '🇻🇪', cur: 'USD', curName: 'Dólar estadounidense', sym: '$', dec: 2, dial: '58', tax: 'RIF', id: 'C.I.', lic: 'COV', lic2: 'MPPS', idTypes: ['V', 'E', 'P', 'J'], extra: ['pagomovil', 'zelle', 'binance'] }
+};
+let LOC = { code: '', ...COUNTRIES.VE };
+export const loc = () => LOC;
+export const isVE = () => !LOC.code || LOC.code === 'VE';
+/** Equivalencia aproximada de 1 USD en cada moneda (solo para adaptar los precios de ejemplo de la demo) */
+export const USD_FX = { USD: 1, ARS: 1200, BOB: 7, BRL: 5.5, CLP: 950, COP: 4000, CRC: 510, CUP: 120, GTQ: 7.7, HNL: 26, MXN: 18.5, NIO: 37, PAB: 1, PYG: 7800, PEN: 3.7, DOP: 62, UYU: 40, VES: 200 };
+/** Bandera del país como imagen (Windows no dibuja los emojis de banderas) */
+export const flagImg = (code, h = 16) => code ? `<img class="flag-img" src="https://flagcdn.com/h40/${String(code).toLowerCase()}.png" alt="" width="${Math.round(h * 4 / 3)}" height="${h}" loading="lazy">` : '';
+export const usd = (n) => `${LOC.sym} ${num(n, LOC.dec)}`;
+/** Monto en bolívares; fuera de Venezuela no se muestra */
+export const bs = (n) => (isVE() ? `Bs ${num(n)}` : '');
 export function qtyFmt(n) {
   const v = Number(n) || 0;
   return Number.isInteger(v) ? String(v) : num(v, v * 100 % 1 === 0 ? 2 : 3);
@@ -106,6 +140,30 @@ export const PAY_METHODS = {
   biopago: { label: 'Biopago', cur: 'BS', cash: false, color: '#db2777' },
   zelle: { label: 'Zelle / Binance', cur: 'USD', cash: false, color: '#0d9488' }
 };
+// Formas de pago fuera de Venezuela (todas en la moneda local; la clave efectivo_usd es "Efectivo")
+const VE_METHODS = { ...PAY_METHODS };
+const LM = (label, color, cash = false) => ({ label, cur: 'USD', cash, color });
+const LOCAL_BASE = { efectivo_usd: LM('Efectivo', '#16a34a', true), debito: LM('Tarjeta de débito', '#2563eb'), credito_tc: LM('Tarjeta de crédito', '#4f46e5'), transferencia: LM('Transferencia', '#0891b2') };
+const M = (label, color, cash = false) => ({ label, color, cash });
+const EXTRA_METHODS = {
+  pagomovil: M('Pago móvil', '#7c3aed'), zelle: M('Zelle', '#6d28d9'), binance: M('Binance / USDT', '#ca8a04'), nequi: M('Nequi', '#db2777'), daviplata: M('Daviplata', '#dc2626'),
+  mercadopago: M('Mercado Pago', '#0ea5e9'), yape: M('Yape', '#7c3aed'), plin: M('Plin', '#ea580c'), pix: M('Pix', '#ea580c'), qr: M('Pago QR', '#7c3aed'), sinpe: M('SINPE Móvil', '#7c3aed'),
+  yappy: M('Yappy', '#ea580c'), deuna: M('DeUna', '#7c3aed'), spei: M('SPEI / CoDi', '#7c3aed'), webpay: M('Webpay', '#dc2626'), tigo: M('Tigo Money', '#2563eb')
+};
+/** Aplica el país en toda la app (moneda, formas de pago, prefijo de WhatsApp) */
+export function applyLocale(code) {
+  const c = COUNTRIES[code] || COUNTRIES.VE;
+  LOC = { code: COUNTRIES[code] ? code : '', ...c };
+  for (const k of Object.keys(PAY_METHODS)) delete PAY_METHODS[k];
+  if (isVE()) Object.assign(PAY_METHODS, VE_METHODS);
+  else {
+    Object.assign(PAY_METHODS, LOCAL_BASE);
+    if (VE_METHODS.credito) PAY_METHODS.credito = VE_METHODS.credito; // fiado
+    for (const k of c.extra || []) if (EXTRA_METHODS[k]) PAY_METHODS[k] = { ...EXTRA_METHODS[k], cur: 'USD', cash: false };
+  }
+  if (typeof document !== 'undefined') document.documentElement.classList.toggle('no-bs', !isVE());
+  return LOC;
+}
 export const methodLabel = (m) => PAY_METHODS[m]?.label || m || 'Otro';
 
 // ---------- Toasts ----------
@@ -275,8 +333,8 @@ export function setBusy(btn, busy, text) {
 
 export function waLink(phone, text) {
   let p = String(phone || '').replace(/\D/g, '');
-  if (p.startsWith('0')) p = '58' + p.slice(1);
-  else if (p.length === 10) p = '58' + p;
+  if (p.startsWith('0')) p = LOC.dial + p.slice(1);
+  else if (p.length <= 10) p = LOC.dial + p;
   return `https://wa.me/${p}?text=${encodeURIComponent(text)}`;
 }
 

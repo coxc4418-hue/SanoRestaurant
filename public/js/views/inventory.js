@@ -2,7 +2,7 @@
 import { store, UNITS, unitShort, compatibleUnits, convertQty } from '../store.js';
 import { moveIngredient } from '../ops.js';
 import { requirePin } from '../auth.js';
-import { esc, usd, bs, num, toast, openModal, confirmDialog, emptyState, normalize, debounce, parseNum, nowISO, qtyFmt, round2, round4, setBusy, fmtDateTime, startOfDay, addDays, toCSV, download } from '../utils.js';
+import { esc, usd, bs, num, toast, openModal, confirmDialog, emptyState, normalize, debounce, parseNum, nowISO, qtyFmt, round2, round4, setBusy, fmtDateTime, startOfDay, addDays, toCSV, download, loc, isVE } from '../utils.js';
 import { icon } from '../icons.js';
 import { printDoc, stockText, usdUnit } from '../shared.js';
 
@@ -105,7 +105,7 @@ export function mount(el) {
     if (!list.length) return;
     const text = `🛒 Lista de compras · ${store.businessName}\n\n` + list.map((x) => `• ${x.i.name}: ${qtyFmt(x.need)} ${unitShort(x.i.unit)}`).join('\n') + `\n\nTotal aprox.: ${usd(total)}`;
     $('#s-wa').href = 'https://wa.me/?text=' + encodeURIComponent(text);
-    $('#s-print').onclick = () => printDoc('Lista de compras', `<table><thead><tr><th>Insumo</th><th>Proveedor</th><th class="r">Existencia</th><th class="r">Comprar</th><th class="r">Costo aprox.</th></tr></thead><tbody>${list.map((x) => `<tr><td>${esc(x.i.name)}</td><td>${esc(x.i.supplier || '')}</td><td class="r">${stockText(x.i)}</td><td class="r"><b>${qtyFmt(x.need)} ${unitShort(x.i.unit)}</b></td><td class="r">$${num(x.cost)}</td></tr>`).join('')}</tbody></table><p><b>Total estimado: $${num(total)}</b></p>`);
+    $('#s-print').onclick = () => printDoc('Lista de compras', `<table><thead><tr><th>Insumo</th><th>Proveedor</th><th class="r">Existencia</th><th class="r">Comprar</th><th class="r">Costo aprox.</th></tr></thead><tbody>${list.map((x) => `<tr><td>${esc(x.i.name)}</td><td>${esc(x.i.supplier || '')}</td><td class="r">${stockText(x.i)}</td><td class="r"><b>${qtyFmt(x.need)} ${unitShort(x.i.unit)}</b></td><td class="r">${usd(x.cost)}</td></tr>`).join('')}</tbody></table><p><b>Total estimado: ${usd(total)}</b></p>`);
   }
 
   async function renderLogs() {
@@ -150,12 +150,12 @@ export function ingredientForm(ing = null, { quick = false } = {}) {
           <div class="field"><label>Unidad de medida</label><select class="select" name="unit">${Object.entries(UNITS).map(([k, u]) => `<option value="${k}" ${k === (ing?.unit || 'und') ? 'selected' : ''}>${u.label} (${u.short})</option>`).join('')}</select></div>
           ${ing ? '' : `<div class="field"><label>Existencia actual</label><div class="row"><input class="input" name="stock" inputmode="decimal" placeholder="0"><span class="small muted" data-u></span></div></div>`}
           <div class="field"><label>Stock mínimo (alerta)</label><div class="row"><input class="input" name="minStock" inputmode="decimal" value="${ing ? String(ing.minStock ?? 0).replace('.', ',') : ''}" placeholder="Ej.: 10"><span class="small muted" data-u></span></div><span class="hint">Te avisamos cuando quede esta cantidad o menos.</span></div>
-          <div class="field"><label>Costo por unidad ($)</label><div class="input-group"><span class="prefix">$</span><input class="input" name="cost" inputmode="decimal" value="${ing?.cost ? String(round4(ing.cost)).replace('.', ',') : ''}" placeholder="0,00"></div><span class="hint" data-costhint></span></div>
+          <div class="field"><label>Costo por unidad ($)</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input" name="cost" inputmode="decimal" value="${ing?.cost ? String(round4(ing.cost)).replace('.', ',') : ''}" placeholder="0,00"></div><span class="hint" data-costhint></span></div>
           <div class="field"><label>Proveedor (opcional)</label><input class="input" name="supplier" value="${esc(ing?.supplier || '')}" placeholder="Ej.: Distribuidora El Pan"></div>
         </div>
         <div class="box">
           <div class="bold small">Calculadora de costo</div>
-          <div class="row row-wrap mt"><span class="small">Compré</span><input class="input input-sm" style="width:80px" data-cq inputmode="decimal" placeholder="20"><select class="select input-sm" style="width:120px" data-cu></select><span class="small">por</span><div class="input-group" style="width:110px"><span class="prefix">$</span><input class="input input-sm" data-cp inputmode="decimal" placeholder="10,00"></div><button type="button" class="btn btn-soft btn-sm" data-calc>Calcular</button></div>
+          <div class="row row-wrap mt"><span class="small">Compré</span><input class="input input-sm" style="width:80px" data-cq inputmode="decimal" placeholder="20"><select class="select input-sm" style="width:120px" data-cu></select><span class="small">por</span><div class="input-group" style="width:110px"><span class="prefix">${esc(loc().sym)}</span><input class="input input-sm" data-cp inputmode="decimal" placeholder="10,00"></div><button type="button" class="btn btn-soft btn-sm" data-calc>Calcular</button></div>
         </div>
         ${ing ? `<label class="check"><span class="switch"><input type="checkbox" data-active ${ing.active !== false ? 'checked' : ''}><span></span></span> Insumo activo</label>` : ''}
         <div class="error-msg" data-err></div>
@@ -176,7 +176,7 @@ export function ingredientForm(ing = null, { quick = false } = {}) {
       if (!(q > 0) || !(p > 0)) { toast('Indica cantidad y precio de la compra', 'warning'); return; }
       const inBase = convertQty(q, $('[data-cu]').value, F.unit.value);
       F.cost.value = String(round4(p / inBase)).replace('.', ',');
-      toast(`Costo: $${num(p / inBase, 4)} por ${unitShort(F.unit.value)}`, 'info');
+      toast(`Costo: ${usd(p / inBase, 4)} por ${unitShort(F.unit.value)}`, 'info');
     };
     const save = async (e) => {
       e?.preventDefault();
@@ -231,7 +231,7 @@ export function movementForm(ing = null, mode = 'compra', suggestQty = null) {
       <div class="small muted" data-mhint></div>
       <div class="form-grid">
         <div class="field"><label data-qlabel>Cantidad</label><div class="row"><input class="input input-lg" name="qty" inputmode="decimal" placeholder="0" value="${suggestQty ? String(suggestQty).replace('.', ',') : ''}" autofocus><select class="select" name="unit" style="width:130px"></select></div></div>
-        <div class="field" data-costf><label>Total pagado ($)</label><div class="input-group"><span class="prefix">$</span><input class="input input-lg" name="total" inputmode="decimal" placeholder="0,00"></div><span class="hint" data-ucost></span></div>
+        <div class="field" data-costf><label>Total pagado ($)</label><div class="input-group"><span class="prefix">${esc(loc().sym)}</span><input class="input input-lg" name="total" inputmode="decimal" placeholder="0,00"></div><span class="hint" data-ucost></span></div>
       </div>
       <div data-payf class="box"><label class="check"><input type="checkbox" name="pay"> <span>Pagar con dinero de la caja</span></label>
         <div class="row mt" data-paycur hidden><span class="small">Moneda:</span><div class="seg"><button type="button" data-pc="USD" class="on">Dólares</button><button type="button" data-pc="BS">Bolívares</button></div></div></div>
@@ -253,7 +253,7 @@ export function movementForm(ing = null, mode = 'compra', suggestQty = null) {
     const after = mode === 'compra' ? before + q : mode === 'conteo' ? q : before - q;
     $('[data-preview]').innerHTML = `<div class="summary-row"><span class="muted">Existencia actual</span><b>${stockText(current)}</b></div><div class="summary-row"><span class="muted">Quedará en</span><b class="${after < 0 ? 'text-danger' : ''}">${qtyFmt(round4(after))} ${unitShort(current.unit)}</b></div>`;
     const tot = parseNum(F.total.value);
-    $('[data-ucost]').textContent = mode === 'compra' && q > 0 && tot > 0 ? `= ${usd(tot / q)} por ${unitShort(current.unit)} · ${bs(tot * store.rate)}` : '';
+    $('[data-ucost]').textContent = mode === 'compra' && q > 0 && tot > 0 ? `= ${usd(tot / q)} por ${unitShort(current.unit)}${isVE() ? ' · ' + bs(tot * store.rate) : ''}` : '';
   };
   const setUnits = () => {
     current = store.ingredient(F.ing.value);

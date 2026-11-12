@@ -1,10 +1,10 @@
 // SANO Restaurant — Service Worker (PWA, funcionamiento sin conexión)
-const VERSION = 'sanorestaurant-v1.3.2';
+const VERSION = 'sanorestaurant-v1.4.4';
 const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 const VIEWS = ['dashboard', 'pos', 'tables', 'orders', 'kitchen', 'menu', 'inventory', 'customers', 'cash', 'reports', 'settings', 'admin'];
 const SHELL = [
   '/', '/index.html', '/manifest.webmanifest', '/css/app.css',
-  '/js/main.js', '/js/firebase.js', '/js/store.js', '/js/auth.js', '/js/utils.js', '/js/icons.js', '/js/shared.js', '/js/ops.js', '/js/demo.js', '/js/charge.js', '/js/install.js', '/js/tour.js',
+  '/js/main.js', '/js/firebase.js', '/js/store.js', '/js/auth.js', '/js/utils.js', '/js/country.js', '/js/icons.js', '/js/shared.js', '/js/ops.js', '/js/demo.js', '/js/charge.js', '/js/install.js', '/js/tour.js',
   ...VIEWS.map((v) => `/js/views/${v}.js`),
   '/assets/logo.svg', '/assets/icon-192.png', '/assets/icon-512.png', '/assets/favicon.png', '/assets/apple-touch-icon.png',
   SDK + 'firebase-app.js', SDK + 'firebase-auth.js', SDK + 'firebase-firestore.js'

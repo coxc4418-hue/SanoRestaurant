@@ -1,6 +1,6 @@
 // SANO Restaurant — Componentes compartidos entre vistas
 import { store, unitShort } from './store.js';
-import { openModal, toast, num, esc, parseNum, fmtDateTime, setBusy, usd, bs, methodLabel, qtyFmt, printHTML, todayKey, dayKey } from './utils.js';
+import { openModal, toast, num, esc, parseNum, fmtDateTime, setBusy, usd, bs, methodLabel, qtyFmt, printHTML, todayKey, dayKey, isVE, loc } from './utils.js';
 import { icon } from './icons.js';
 
 export const APP_NAME = 'SANO Restaurant';
@@ -28,6 +28,7 @@ export async function fetchBcvRate() {
 
 /** Si la tasa automática está activa y no se actualizó hoy, la consulta y la guarda. */
 export async function autoUpdateRate() {
+  if (!isVE()) return false;
   const s = store.settings;
   if (s.rateAuto === false) return false;
   if (s.rateUpdatedAt && dayKey(new Date(s.rateUpdatedAt)) === todayKey() && store.rate > 0) return false;
@@ -35,12 +36,13 @@ export async function autoUpdateRate() {
     const r = await fetchBcvRate();
     if (Math.abs(r.rate - store.rate) < 0.0001 && s.rateUpdatedAt && dayKey(new Date(s.rateUpdatedAt)) === todayKey()) return false;
     await store.setRate(Math.round(r.rate * 100) / 100, true);
-    toast(`Tasa BCV del día actualizada: Bs ${num(r.rate)}`, 'info', 4000);
+    toast(`Tasa BCV del día actualizada: ${bs(r.rate)}`, 'info', 4000);
     return true;
   } catch (_) { return false; }
 }
 
 export function openRateModal() {
+  if (!isVE()) { import('./country.js').then((m) => m.openCountryPicker()); return; }
   const s = store.settings;
   const m = openModal({
     title: 'Tasa del día',
@@ -78,7 +80,7 @@ export function openRateModal() {
     const autoFlag = m.el.querySelector('[data-autoflag]').checked;
     await store.saveSettings({ rateAuto: autoFlag });
     await store.setRate(v, false);
-    toast(`Tasa actualizada: Bs ${num(v)} por $1`);
+    toast(`Tasa actualizada: ${bs(v)} por $1`);
     m.close();
   };
   m.el.querySelector('[data-f]').onsubmit = save;
@@ -93,7 +95,7 @@ export function moneyPair(usdVal, rate = store.rate) {
 }
 export const toBs = (v) => bs((Number(v) || 0) * store.rate);
 /** Costo unitario: muestra 4 decimales cuando es muy pequeño (ej. costo por gramo) */
-export const usdUnit = (v) => { const n = Number(v) || 0; return n > 0 && n < 0.1 ? `$ ${num(n, 4)}` : usd(n); };
+export const usdUnit = (v) => { const n = Number(v) || 0; return n > 0 && n < 0.1 ? `${loc().sym} ${num(n, 4)}` : usd(n); };
 
 // ======================================================================
 // IMPRESIÓN
@@ -119,7 +121,7 @@ function headerHTML() {
 
 function linesHTML(items) {
   return (items || []).map((it) => `
-    <tr><td colspan="2" style="padding-top:3px">${qtyFmt(it.qty)} x ${esc(it.name)}${it.variantName ? ' (' + esc(it.variantName) + ')' : ''}</td><td class="r">$${num(it.total)}</td></tr>
+    <tr><td colspan="2" style="padding-top:3px">${qtyFmt(it.qty)} x ${esc(it.name)}${it.variantName ? ' (' + esc(it.variantName) + ')' : ''}</td><td class="r">${usd(it.total)}</td></tr>
     ${(it.extras || []).length ? `<tr><td colspan="3" class="sm">  + ${it.extras.map((e) => esc(e.name)).join(', ')}</td></tr>` : ''}
     ${it.note ? `<tr><td colspan="3" class="sm">  * ${esc(it.note)}</td></tr>` : ''}`).join('');
 }
@@ -129,7 +131,7 @@ export function receiptHTML(sale) {
   const rate = sale.rate || store.rate;
   const ivaPct = Number(s.iva) || 0;
   const ivaBs = ivaPct > 0 ? (sale.total - sale.total / (1 + ivaPct / 100)) * rate : 0;
-  const pays = (sale.payments || []).map((p) => `<tr><td colspan="2">${esc(methodLabel(p.method))}</td><td class="r">${p.currency === 'BS' ? 'Bs ' + num(p.amount) : '$' + num(p.amount)}</td></tr>`).join('');
+  const pays = (sale.payments || []).map((p) => `<tr><td colspan="2">${esc(methodLabel(p.method))}</td><td class="r">${p.currency === 'BS' ? bs(p.amount) : usd(p.amount)}</td></tr>`).join('');
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recibo ${esc(sale.number)}</title><style>${ticketCSS(s.receiptFormat)}</style></head><body>
     ${headerHTML()}
     <div class="hr"></div>
@@ -145,17 +147,17 @@ export function receiptHTML(sale) {
     <table>${linesHTML(sale.items)}</table>
     <div class="hr"></div>
     <table>
-      <tr><td colspan="2">Subtotal</td><td class="r">$${num(sale.subtotal)}</td></tr>
-      ${sale.discount > 0 ? `<tr><td colspan="2">Descuento</td><td class="r">-$${num(sale.discount)}</td></tr>` : ''}
-      ${sale.delivery > 0 ? `<tr><td colspan="2">Delivery</td><td class="r">$${num(sale.delivery)}</td></tr>` : ''}
-      ${sale.tip > 0 ? `<tr><td colspan="2">Propina</td><td class="r">$${num(sale.tip)}</td></tr>` : ''}
-      <tr class="big"><td colspan="2">TOTAL $</td><td class="r">$${num(sale.total)}</td></tr>
-      <tr class="big"><td colspan="2">TOTAL Bs</td><td class="r">${num(sale.totalBs)}</td></tr>
-      <tr><td colspan="3" class="sm">Tasa: Bs ${num(rate)} por $</td></tr>
-      ${ivaBs > 0.009 ? `<tr><td colspan="2">IVA ${num(ivaPct, 0)}% incluido</td><td class="r">Bs ${num(ivaBs)}</td></tr>` : ''}
+      <tr><td colspan="2">Subtotal</td><td class="r">${usd(sale.subtotal)}</td></tr>
+      ${sale.discount > 0 ? `<tr><td colspan="2">Descuento</td><td class="r">-${usd(sale.discount)}</td></tr>` : ''}
+      ${sale.delivery > 0 ? `<tr><td colspan="2">Delivery</td><td class="r">${usd(sale.delivery)}</td></tr>` : ''}
+      ${sale.tip > 0 ? `<tr><td colspan="2">Propina</td><td class="r">${usd(sale.tip)}</td></tr>` : ''}
+      <tr class="big"><td colspan="2">TOTAL $</td><td class="r">${usd(sale.total)}</td></tr>
+      ${isVE() ? `<tr class="big"><td colspan="2">TOTAL Bs</td><td class="r">${num(sale.totalBs)}</td></tr>` : ''}
+      ${isVE() ? `<tr><td colspan="3" class="sm">Tasa: ${bs(rate)} por $</td></tr>` : ''}
+      ${ivaBs > 0.009 ? `<tr><td colspan="2">IVA ${num(ivaPct, 0)}% incluido</td><td class="r">${bs(ivaBs)}</td></tr>` : ''}
     </table>
     ${pays ? `<div class="hr"></div><table>${pays}</table>` : ''}
-    ${sale.changeUSD > 0.009 ? `<div>Vuelto: ${sale.changeCurrency === 'BS' ? 'Bs ' + num(sale.changeUSD * rate) : '$' + num(sale.changeUSD)}</div>` : ''}
+    ${sale.changeUSD > 0.009 ? `<div>Vuelto: ${sale.changeCurrency === 'BS' ? bs(sale.changeUSD * rate) : usd(sale.changeUSD)}</div>` : ''}
     ${sale.note ? `<div>Nota: ${esc(sale.note)}</div>` : ''}
     <div class="hr"></div>
     <div class="c">${esc(s.receiptFooter || '¡Gracias por tu compra!')}</div>
@@ -177,9 +179,9 @@ export function printPreBill(order, totals) {
     <table>${linesHTML(order.items)}</table>
     <div class="hr"></div>
     <table>
-      <tr><td colspan="2">Subtotal</td><td class="r">$${num(totals.subtotal)}</td></tr>
-      <tr class="big"><td colspan="2">TOTAL $</td><td class="r">$${num(totals.total)}</td></tr>
-      <tr class="big"><td colspan="2">TOTAL Bs</td><td class="r">${num(totals.total * store.rate)}</td></tr>
+      <tr><td colspan="2">Subtotal</td><td class="r">${usd(totals.subtotal)}</td></tr>
+      <tr class="big"><td colspan="2">TOTAL $</td><td class="r">${usd(totals.total)}</td></tr>
+      ${isVE() ? `<tr class="big"><td colspan="2">TOTAL Bs</td><td class="r">${num(totals.total * store.rate)}</td></tr>` : ''}
     </table>
     <div class="hr"></div><div class="c sm">Documento no fiscal · Solicite su recibo al pagar</div>
   </body></html>`);

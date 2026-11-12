@@ -650,3 +650,17 @@ fieldset { border: 0; padding: 0; margin: 0; }
 .sb-search svg { width: 17px; height: 17px; flex: none; }
 .sb-search span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-search kbd { font: 600 10.5px/1 inherit; padding: 3px 5px; border-radius: 5px; border: 1px solid currentColor; opacity: .7; }
+
+/* País y moneda */
+.country-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-height: 46vh; overflow: auto; padding: 2px; }
+.country { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: inherit; text-align: left; font: inherit; cursor: pointer; transition: all .15s; }
+.country:hover { background: var(--surface-2); }
+.country.on { border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 25%, transparent); }
+.country b { display: block; font-size: 14px; }
+.country small { display: block; font-size: 12px; opacity: .75; }
+.flag { line-height: 1; flex: none; }
+.flag-img { display: inline-block; vertical-align: -3px; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px rgba(0,0,0,.12); }
+.flag .flag-img { vertical-align: middle; }
+.rate-mini .flag-img { width: 18px; height: 13px; }
+/* Fuera de Venezuela no se muestran bolívares ni la tasa */
+.no-bs .text-bs, .no-bs .bs-only { display: none !important; }

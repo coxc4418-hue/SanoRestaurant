@@ -2,7 +2,7 @@
 import {
   db, collection, doc, getDoc, getDocs, setDoc, deleteDoc, onSnapshot, query, where, writeBatch, increment
 } from './firebase.js';
-import { addDays, startOfDay, sha256, toast, round4, todayKey } from './utils.js';
+import { addDays, startOfDay, sha256, toast, round4, todayKey, applyLocale, isVE } from './utils.js';
 
 // Categorías del menú (lo que se vende)
 export const DEFAULT_MENU_CATEGORIES = ['Perros calientes', 'Hamburguesas', 'Pizzas', 'Combos', 'Arepas', 'Pepitos', 'Acompañantes', 'Bebidas', 'Postres'];
@@ -133,6 +133,7 @@ class Store {
     listen(this.tenantRef(), 'tenant', (s) => { this.tenant = s.exists() ? { id: s.id, ...s.data() } : null; });
     listen(this.ref('config', 'settings'), 'settings', (s) => {
       this.settings = { ...DEFAULT_SETTINGS, ...(s.exists() ? s.data() : {}) };
+      applyLocale(this.settings.country || 'VE');
       for (const k of ['categories', 'ingredientCategories', 'zones']) {
         if (!Array.isArray(this.settings[k]) || !this.settings[k].length) this.settings[k] = DEFAULT_SETTINGS[k];
       }
@@ -176,9 +177,15 @@ class Store {
   }
 
   // ---------- Ajustes ----------
-  get rate() { return Number(this.settings.rate) || 0; }
+  get rate() { return isVE() ? (Number(this.settings.rate) || 0) : 1; }
   get businessName() { return this.settings.businessName || this.tenant?.name || 'Mi restaurante'; }
 
+  /** País de trabajo: moneda, formas de pago y prefijo de WhatsApp */
+  async setCountry(code) {
+    const l = applyLocale(code);
+    await this.saveSettings({ country: code, currency: l.cur, countrySetAt: new Date().toISOString() });
+    this.emit('rate', this.rate);
+  }
   async saveSettings(patch) {
     Object.assign(this.settings, patch);
     await this.save('config', 'settings', patch, true);

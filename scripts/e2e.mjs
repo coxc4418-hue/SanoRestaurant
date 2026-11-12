@@ -22,6 +22,8 @@ const errors = [];
 async function newPage(w = 1400, h = 900) {
   const ctx = await browser.createBrowserContext();
   const page = await ctx.newPage();
+  // El selector de país aparece la primera vez: en las pruebas se elige Venezuela (dólares + tasa BCV)
+  await page.evaluateOnNewDocument(() => { new MutationObserver(() => { const b = document.querySelector('.country-grid [data-c="VE"]'); const ok = b && [...document.querySelectorAll('.modal [data-ok]')].pop(); if (b && ok && !window.__ctry) { window.__ctry = 1; b.click(); setTimeout(() => { [...document.querySelectorAll('.modal [data-ok]')].pop()?.click(); setTimeout(() => { window.__ctry = 0; }, 1500); }, 150); } }).observe(document, { childList: true, subtree: true }); });
   await page.setViewport({ width: w, height: h });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   page.on('console', (m) => { if (m.type() === 'error' && !/favicon|dolarapi|ERR_|Failed to load resource|net::|CORS/i.test(m.text())) errors.push(`console: ${m.text()}`); });
